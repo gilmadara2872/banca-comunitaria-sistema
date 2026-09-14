@@ -1,0 +1,66 @@
+# Arquivos e diretórios do Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Banco de dados SQLite
+*.db
+*.sqlite
+*.sqlite3
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Arquivos de dados
+data/
+*.csv
+*.json
+!frontend/manifest.json
+
+# Arquivos temporários
+tmp/
+temp/
+
+# Arquivos de build
+dist/
+build/
+*.egg-info/
+
+# Node/JS
+node_modules/
+
+# Arquivos de teste
+test/
+tests/
+*.test.*
+
+# Arquivos de ambiente
+.env
+.env.local
+.env.*.local
+
+# Chaves e secrets
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
