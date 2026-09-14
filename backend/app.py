@@ -153,7 +153,7 @@ def index():
 @app.route('/stats')
 def stats():
     """Serve a página de estatísticas"""
-    return send_from_directory('../frontend', 'stats.html')
+    return send_from_directory(app.static_folder, 'stats.html')
 
 @app.route('/dados')
 def dados_endpoint():
