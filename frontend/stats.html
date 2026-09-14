@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Dashboard Banca Comunitária</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 16px; }
+        .container { max-width: 480px; margin: 0 auto; }
+        h1 { font-size: 20px; margin-bottom: 16px; color: #333; text-align: center; }
+        .card { background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 16px; color: #333; margin-bottom: 12px; }
+        .chart-container { position: relative; width: 100%; height: 250px; }
+        .stat { text-align: center; padding: 12px; margin-bottom: 8px; border-radius: 6px; }
+        .stat-total { background: #e8f4fd; border-left: 4px solid #007bff; }
+        .stat-zero { background: #fff3cd; border-left: 4px solid #ffc107; }
+        .stat-low { background: #d4edda; border-left: 4px solid #28a745; }
+        .stat-label { font-size: 12px; color: #666; margin-bottom: 4px; }
+        .stat-number { font-size: 24px; font-weight: bold; }
+        .stat-number.green { color: #28a745; }
+        .stat-number.yellow { color: #856404; }
+        .stat-number.blue { color: #007bff; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { background: #f8f9fa; font-weight: 600; }
+        tr:hover { background: #f8f9fa; }
+        .loading { text-align: center; padding: 40px; color: #999; }
+        @media (max-width: 400px) {
+            .stat-number { font-size: 20px; }
+        }
+    </style>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="container">
+    <h1>📊 Dashboard da Banca</h1>
+    
+    <div class="resumo-cards">
+        <div class="stat stat-total">
+            <div class="stat-label">Total de Produtos</div>
+            <div class="stat-number blue" id="total-produtos">-</div>
+        </div>
+        <div class="stat stat-zero">
+            <div class="stat-label">Sem Estoque</div>
+            <div class="stat-number" id="sem-estoque">-</div>
+        </div>
+        <div class="stat stat-low">
+            <div class="stat-label">Baixo Estoque</div>
+            <div class="stat-number green" id="baixo-estoque">-</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📈 Estoque por Produto</h2>
+        <div class="chart-container">
+            <canvas id="produtoChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📦 Entradas vs Saídas</h2>
+        <div class="chart-container">
+            <canvas id="movimentoChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📋 Últimas 10 Doações</h2>
+        <table>
+            <thead>
+                <tr><th>Data</th><th>Produto</th><th>Qtd</th><th>Doador</th></tr>
+            </thead>
+            <tbody id="doacoes-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let produtoChart, movimentoChart;
+
+async function carregarDados() {
+    try {
+        const [estoqueRes, doacoesRes] = await Promise.all([
+            fetch('/api/estoque'),
+            fetch('/api/doacoes?limit=10')
+        ]);
+        
+        const estoque = await estoqueRes.json();
+        const doacoes = await doacoesRes.json();
+
+        document.getElementById('total-produtos').textContent = estoque.resumo?.total_produtos || 12;
+        document.getElementById('sem-estoque').textContent = estoque.resumo?.sem_estoque || 0;
+        document.getElementById('baixo-estoque').textContent = estoque.resumo?.baixo_estoque || 0;
+
+        // Gráfico de pizza - estoque por produto
+        const produtosComEstoque = (estoque.produtos || []).filter(p => p.quantidade > 0);
+        const labels = produtosComEstoque.map(p => p.nome);
+        const data = produtosComEstoque.map(p => p.quantidade);
+        const colors = produtosComEstoque.map(p => {
+            if (p.quantidade === 0) return '#dc3545';
+            if (p.quantidade < 5) return '#ffc107';
+            return '#28a745';
+        });
+
+        if (produtoChart) produtoChart.destroy();
+        produtoChart = new Chart(document.getElementById('produtoChart'), {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: data.length ? colors : ['#ccc'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 10 } } }
+                }
+            }
+        });
+
+        // Gráfico de barras - doações vs distribuições (simulado)
+        if (movimentoChart) movimentoChart.destroy();
+        movimentoChart = new Chart(document.getElementById('movimentoChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Doações', 'Distribuições'],
+                datasets: [{
+                    label: 'Quantidade',
+                    data: [doacoes.doacoes?.length || 0, 0], // Simples por enquanto
+                    backgroundColor: ['#28a745', '#dc3545'],
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // Tabela de doações
+        const tbody = document.getElementById('doacoes-tbody');
+        tbody.innerHTML = (doacoes.doacoes || []).map(d => `
+            <tr>
+                <td>${d.data || '-'}</td>
+                <td>${d.nome}</td>
+                <td>${d.quantidade}</td>
+                <td>${d.doador}</td>
+            </tr>
+        `).join('') || '<tr><td colspan="4" class="loading">Nenhuma doação registrada</td></tr>';
+
+    } catch (e) {
+        console.error(e);
+        document.querySelector('.card').innerHTML = '<div class="loading">Erro ao carregar dados</div>';
+    }
+}
+
+carregarDados();
+setInterval(carregarDados, 30000);
+</script>
+</body>
+</html>

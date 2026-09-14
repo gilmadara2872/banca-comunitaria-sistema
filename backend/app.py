@@ -150,6 +150,23 @@ def index():
     """Serve o frontend"""
     return send_from_directory('../frontend', 'index.html')
 
+@app.route('/stats')
+def stats():
+    """Serve a página de estatísticas"""
+    return send_from_directory('../frontend', 'stats.html')
+
+@app.route('/dados')
+def dados_endpoint():
+    """Retorna dados para o dashboard"""
+    try:
+        from db import listar_produtos, listar_doacoes
+        return jsonify({
+            'produtos': listar_produtos(),
+            'doacoes': listar_doacoes(10)
+        })
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
