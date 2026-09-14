@@ -12,7 +12,8 @@ from db import (
     listar_doacoes, listar_distribuicoes, resumo_estoque, atualizar_estoque
 )
 
-app = Flask(__name__, static_folder='../frontend', static_url_path='')
+frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend')
+app = Flask(__name__, static_folder=frontend_dir, static_url_path='')
 CORS(app)
 
 # Inicializar banco no início
