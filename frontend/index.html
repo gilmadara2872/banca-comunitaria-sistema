@@ -2,872 +2,176 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#2d6a4f">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="description" content="Sistema de Gestão da Banca Alimentícia - Controle de doações e distribuições">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    
-    <title>Banca Alimentícia</title>
-    
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banca Comunitária</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #f0f9f4 0%, #e8f5ee 100%);
-            min-height: 100vh;
-            color: #1a1a2e;
-        }
-        
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 16px;
-            padding-bottom: 100px;
-        }
-        
-        header {
-            background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 16px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(45, 106, 79, 0.3);
-            text-align: center;
-        }
-        
-        header h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-        
-        header p {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-        
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-        
-        .menu-item {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border: none;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #2d6a4f;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .menu-item:active {
-            transform: scale(0.98);
-        }
-        
-        .menu-item .icon {
-            font-size: 2rem;
-        }
-        
-        .screen {
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-        
-        .screen.active {
-            display: block;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .card h2 {
-            color: #2d6a4f;
-            font-size: 1.2rem;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .form-group {
-            margin-bottom: 16px;
-        }
-        
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: #4a5568;
-        }
-        
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 14px;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 1rem;
-            transition: border-color 0.2s;
-        }
-        
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #2d6a4f;
-        }
-        
-        .form-group textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-        
-        .btn {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%);
-            color: white;
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #52b788 0%, #74c69d 100%);
-            color: white;
-        }
-        
-        .btn-warning {
-            background: linear-gradient(135deg, #f9c74f 0%, #f8961e 100%);
-            color: #1a1a2e;
-        }
-        
-        .btn:active {
-            transform: scale(0.98);
-        }
-        
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        
-        .back-btn {
-            background: #f7fafc;
-            color: #4a5568;
-            margin-bottom: 16px;
-        }
-        
-        .estoque-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-        
-        .estoque-item {
-            background: white;
-            border-radius: 12px;
-            padding: 16px;
-            text-align: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-        
-        .estoque-item .produto-nome {
-            font-weight: 600;
-            color: #2d6a4f;
-            margin-bottom: 4px;
-        }
-        
-        .estoque-item .estoque-valor {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-        
-        .estoque-item .estoque-unidade {
-            font-size: 0.85rem;
-            color: #718096;
-        }
-        
-        .estoque-baixo {
-            border-left: 4px solid #e53e3e;
-        }
-        
-        .estoque-zero {
-            border-left: 4px solid #a0aec0;
-            opacity: 0.7;
-        }
-        
-        .alerta {
-            padding: 12px 16px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            font-weight: 500;
-        }
-        
-        .alerta-sucesso {
-            background: #c6f6d5;
-            color: #22543d;
-        }
-        
-        .alerta-erro {
-            background: #fed7d7;
-            color: #9b2c2c;
-        }
-        
-        .alerta-info {
-            background: #bee3f8;
-            color: #2a4365;
-        }
-        
-        .lista-item {
-            background: white;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-        
-        .lista-item .info {
-            flex: 1;
-        }
-        
-        .lista-item .info .titulo {
-            font-weight: 600;
-            color: #2d6a4f;
-        }
-        
-        .lista-item .info .detalhes {
-            font-size: 0.9rem;
-            color: #718096;
-            margin-top: 4px;
-        }
-        
-        .lista-item .acao {
-            font-size: 0.85rem;
-            color: #48bb78;
-            font-weight: 600;
-        }
-        
-        .sem-dados {
-            text-align: center;
-            padding: 40px 20px;
-            color: #718096;
-        }
-        
-        .sem-dados .icon {
-            font-size: 3rem;
-            margin-bottom: 12px;
-        }
-        
-        .resumo-cards {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-        
-        .resumo-card {
-            background: white;
-            border-radius: 12px;
-            padding: 16px;
-            text-align: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-        
-        .resumo-card .valor {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #2d6a4f;
-        }
-        
-        .resumo-card .label {
-            font-size: 0.85rem;
-            color: #718096;
-            margin-top: 4px;
-        }
-        
-        .footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            padding: 12px;
-            border-top: 1px solid #e2e8f0;
-            text-align: center;
-            font-size: 0.85rem;
-            color: #718096;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #718096;
-        }
-        
-        .loading .spinner {
-            border: 3px solid #e2e8f0;
-            border-top-color: #2d6a4f;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 12px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Data picker melhor para mobile */
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            opacity: 0.6;
-            cursor: pointer;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 16px; }
+        .container { max-width: 480px; margin: 0 auto; }
+        h1 { font-size: 20px; margin-bottom: 16px; color: #333; text-align: center; }
+        .card { background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 16px; color: #333; margin-bottom: 12px; }
+        .estoque-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+        .produto { background: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 4px solid #007bff; }
+        .produto .nome { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+        .produto .qtd { font-size: 12px; color: #666; }
+        .btn { background: #007bff; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 14px; cursor: pointer; width: 100%; }
+        .btn:active { background: #0056b3; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .input { width: 100%; padding: 10px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .label { font-size: 12px; color: #666; margin-bottom: 4px; }
+        select, input { width: 100%; }
+        .action-btn { background: #28a745; }
+        .action-btn:active { background: #218838; }
+        .danger-btn { background: #dc3545; }
+        .danger-btn:active { background: #c82333; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .resumo-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .resumo-card { background: white; padding: 16px; border-radius: 8px; text-align: center; }
+        .resumo-card .numero { font-size: 24px; font-weight: bold; color: #007bff; }
+        .resumo-card .label { font-size: 12px; color: #666; }
+        .lista-vazia { text-align: center; padding: 24px; color: #999; }
+        @media (max-width: 400px) { .resumo-cards { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>📦 Banca Alimentícia</h1>
-            <p>Sistema de Gestão de Doações</p>
-        </header>
-        
-        <!-- TELA INICIAL -->
-        <div id="tela-inicial" class="screen active">
-            <div class="menu-grid">
-                <button class="menu-item" onclick="navigate('estoque')">
-                    <span class="icon">📊</span>
-                    Estoque
-                </button>
-                <button class="menu-item" onclick="navigate('doacao')">
-                    <span class="icon">➕</span>
-                    Nova Doação
-                </button>
-                <button class="menu-item" onclick="navigate('distribuicao')">
-                    <span class="icon">📤</span>
-                    Nova Distribuição
-                </button>
-                <button class="menu-item" onclick="navigate('historico')">
-                    <span class="icon">📋</span>
-                    Histórico
-                </button>
-            </div>
+<div class="container">
+    <div class="header">
+        <h1>🏪 Banca Comunitária</h1>
+        <button onclick="atualizar()" class="action-btn" style="padding:8px;">🔄</button>
+    </div>
+
+    <div class="resumo-cards">
+        <div class="resumo-card">
+            <div class="numero" id="total-produtos">-</div>
+            <div class="label">Produtos</div>
         </div>
-        
-        <!-- TELA DE ESTOQUE -->
-        <div id="tela-estoque" class="screen">
-            <button class="btn back-btn" onclick="navigate('inicial')">← Voltar</button>
-            
-            <div id="estoque-loading" class="loading">
-                <div class="spinner"></div>
-                <p>Carregando estoque...</p>
-            </div>
-            
-            <div id="estoque-conteudo" style="display: none;">
-                <div class="resumo-cards">
-                    <div class="resumo-card">
-                        <div class="valor" id="resumo-total">-</div>
-                        <div class="label">Total de itens</div>
-                    </div>
-                    <div class="resumo-card">
-                        <div class="valor" id="resumo-saldo">-</div>
-                        <div class="label">Saldo total</div>
-                    </div>
-                    <div class="resumo-card">
-                        <div class="valor" id="resumo-baixo" style="color: #e53e3e;">-</div>
-                        <div class="label">Estoque baixo</div>
-                    </div>
-                    <div class="resumo-card">
-                        <div class="valor" id="resumo-zero" style="color: #a0aec0;">-</div>
-                        <div class="label">Sem estoque</div>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <h2>📦 Produtos em Estoque</h2>
-                    <div id="estoque-lista" class="estoque-grid"></div>
-                </div>
-            </div>
+        <div class="resumo-card">
+            <div class="numero" id="baixo-estoque">-</div>
+            <div class="label">Baixo Estoque</div>
         </div>
-        
-        <!-- TELA DE NOVA DOAÇÃO -->
-        <div id="tela-doacao" class="screen">
-            <button class="btn back-btn" onclick="navigate('inicial')">← Voltar</button>
-            
-            <div class="card">
-                <h2>📦 Registrar Nova Doação</h2>
-                
-                <div class="form-group">
-                    <label for="doacao-produto">Produto *</label>
-                    <select id="doacao-produto" required>
-                        <option value="">Selecione o produto...</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="doacao-quantidade">Quantidade *</label>
-                    <input type="number" id="doacao-quantidade" min="0.01" step="0.01" 
-                           placeholder="Ex: 2" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="doacao-doador">Quem doou *</label>
-                    <input type="text" id="doacao-doador" placeholder="Ex: Maria Silva, Feira Livre..." required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="doacao-data">Data</label>
-                    <input type="date" id="doacao-data">
-                </div>
-                
-                <div class="form-group">
-                    <label for="doacao-obs">Observação (opcional)</label>
-                    <textarea id="doacao-obs" placeholder="Ex: Vence em..."></textarea>
-                </div>
-                
-                <button class="btn btn-success" onclick="registrarDoacao()">
-                    ✅ Salvar Doação
-                </button>
-            </div>
-            
-            <div id="doacao-feedback"></div>
-        </div>
-        
-        <!-- TELA DE NOVA DISTRIBUIÇÃO -->
-        <div id="tela-distribuicao" class="screen">
-            <button class="btn back-btn" onclick="navigate('inicial')">← Voltar</button>
-            
-            <div class="card">
-                <h2>📤 Registrar Distribuição</h2>
-                
-                <div class="form-group">
-                    <label for="dist-produto">Produto *</label>
-                    <select id="dist-produto" required>
-                        <option value="">Selecione o produto...</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="dist-quantidade">Quantidade *</label>
-                    <input type="number" id="dist-quantidade" min="0.01" step="0.01" 
-                           placeholder="Ex: 1" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="dist-beneficiario">Para quem? *</label>
-                    <input type="text" id="dist-beneficiario" placeholder="Ex: Família Silva..." required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="dist-data">Data</label>
-                    <input type="date" id="dist-data">
-                </div>
-                
-                <div class="form-group">
-                    <label for="dist-obs">Observação (opcional)</label>
-                    <textarea id="dist-obs" placeholder="Ex: Pendência..."></textarea>
-                </div>
-                
-                <button class="btn btn-warning" onclick="registrarDistribuicao()">
-                    📤 Salvar Distribuição
-                </button>
-            </div>
-            
-            <div id="dist-feedback"></div>
-        </div>
-        
-        <!-- TELA DE HISTÓRICO -->
-        <div id="tela-historico" class="screen">
-            <button class="btn back-btn" onclick="navigate('inicial')">← Voltar</button>
-            
-            <div class="card">
-                <h2>📋 Histórico</h2>
-                
-                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-                    <button class="btn" style="flex: 1; background: #2d6a4f; color: white;" 
-                            onclick="filtrarHistorico('doacoes')" id="btn-historico-doacoes">
-                        📦 Doações
-                    </button>
-                    <button class="btn" style="flex: 1; background: #f9c74f; color: #1a1a2e;" 
-                            onclick="filtrarHistorico('distribuicoes')" id="btn-historico-distribuicoes">
-                        📤 Distribuições
-                    </button>
-                </div>
-                
-                <div id="historico-loading" class="loading">
-                    <div class="spinner"></div>
-                    <p>Carregando...</p>
-                </div>
-                
-                <div id="historico-lista" style="display: none;"></div>
-            </div>
+        <div class="resumo-card">
+            <div class="numero" id="sem_estoque">-</div>
+            <div class="label">Sem Estoque</div>
         </div>
     </div>
-    
-    <div class="footer">
-        Banca Alimentícia - Sistema de Gestão
+
+    <div class="card">
+        <h2>📦 Estoque Atual</h2>
+        <div id="lista-estoque"></div>
     </div>
-    
-    <script>
-        // ============================================
-        // CONFIGURAÇÃO
-        // ============================================
-        
-        // URL do backend - mudar quando deployar
-        // Quando for usar local: http://localhost:5000
-        // Quando for deployado: usar a URL do Railway
-        const API_URL = 'http://localhost:5000/api';
-        
-        let currentScreen = 'inicial';
-        let produtos = [];
-        
-        // ============================================
-        // NAVEGAÇÃO
-        // ============================================
-        
-        function navigate(screen) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            
-            currentScreen = screen;
-            
-            switch(screen) {
-                case 'inicial':
-                    document.getElementById('tela-inicial').classList.add('active');
-                    break;
-                case 'estoque':
-                    document.getElementById('tela-estoque').classList.add('active');
-                    carregarEstoque();
-                    break;
-                case 'doacao':
-                    document.getElementById('tela-doacao').classList.add('active');
-                    carregarProdutos('doacao-produto');
-                    break;
-                case 'distribuicao':
-                    document.getElementById('tela-distribuicao').classList.add('active');
-                    carregarProdutos('dist-produto');
-                    break;
-                case 'historico':
-                    document.getElementById('tela-historico').classList.add('active');
-                    filtrarHistorico('doacoes');
-                    break;
-            }
+
+    <div class="card">
+        <h2>➕ Registrar Doação</h2>
+        <select id="produto-select"></select>
+        <input type="number" id="qtd-doacao" placeholder="Quantidade" min="0.1" step="0.1">
+        <input type="text" id="nome-doador" placeholder="Nome do doador">
+        <input type="text" id="obs-doacao" placeholder="Observação (opcional)">
+        <button class="btn" onclick="registrarDoacao()">Registrar Doação</button>
+    </div>
+
+    <div class="card">
+        <h2>➡️ Registrar Distribuição</h2>
+        <select id="produto-dist"></select>
+        <input type="number" id="qtd-dist" placeholder="Quantidade" min="0.1" step="0.1">
+        <input type="text" id="nome-benef" placeholder="Nome do beneficiário">
+        <input type="text" id="obs-dist" placeholder="Observação (opcional)">
+        <button class="btn action-btn" onclick="registrarDistribuicao()">Registrar Distribuição</button>
+    </div>
+</div>
+
+<script>
+async function atualizar() {
+    try {
+        const resumoR = await fetch('/api/resumo');
+        const resumo = await resumoR.json();
+        document.getElementById('total-produtos').textContent = resumo.total_produtos || 0;
+        document.getElementById('baixo-estoque').textContent = resumo.baixo_estoque || 0;
+        document.getElementById('sem_estoque').textContent = resumo.sem_estoque || 0;
+
+        const estoqueR = await fetch('/api/estoque');
+        const dados = await estoqueR.json();
+
+        const lista = document.getElementById('lista-estoque');
+        const produtos = dados.produtos || [];
+
+        if (produtos.length === 0) {
+            lista.innerHTML = '<div class="lista-vazia">Nenhum produto cadastrado</div>';
+            return;
         }
-        
-        // ============================================
-        // CARREGAR DADOS
-        // ============================================
-        
-        async function carregarProdutos(selectId) {
-            try {
-                const response = await fetch(`${API_URL}/estoque`);
-                const data = await response.json();
-                
-                const select = document.getElementById(selectId);
-                select.innerHTML = '<option value="">Selecione o produto...</option>';
-                
-                data.produtos.forEach(p => {
-                    const option = document.createElement('option');
-                    option.value = p.id;
-                    option.textContent = `${p.nome} (${p.estoque_atual} ${p.unidade})`;
-                    select.appendChild(option);
-                });
-                
-                return data.produtos;
-            } catch (error) {
-                console.error('Erro ao carregar produtos:', error);
-                return [];
-            }
-        }
-        
-        async function carregarEstoque() {
-            try {
-                document.getElementById('estoque-loading').style.display = 'block';
-                document.getElementById('estoque-conteudo').style.display = 'none';
-                
-                const response = await fetch(`${API_URL}/estoque`);
-                const data = await response.json();
-                
-                if (data.produtos) {
-                    produtos = data.produtos;
-                    
-                    // Preencher resumo
-                    const resumo = data.resumo;
-                    document.getElementById('resumo-total').textContent = resumo.total_produtos;
-                    document.getElementById('resumo-saldo').textContent = resumo.total_estoque.toFixed(1);
-                    document.getElementById('resumo-baixo').textContent = resumo.baixo_estoque;
-                    document.getElementById('resumo-zero').textContent = resumo.sem_estoque;
-                    
-                    // Preencher lista de produtos
-                    const lista = document.getElementById('estoque-lista');
-                    lista.innerHTML = '';
-                    
-                    data.produtos.forEach(p => {
-                        const item = document.createElement('div');
-                        item.className = 'estoque-item';
-                        
-                        if (p.estoque_atual === 0) {
-                            item.classList.add('estoque-zero');
-                        } else if (p.estoque_atual < 5) {
-                            item.classList.add('estoque-baixo');
-                        }
-                        
-                        item.innerHTML = `
-                            <div class="produto-nome">${p.nome}</div>
-                            <div class="estoque-valor">${p.estoque_atual.toFixed(1)}</div>
-                            <div class="estoque-unidade">${p.unidade}</div>
-                        `;
-                        lista.appendChild(item);
-                    });
-                    
-                    document.getElementById('estoque-loading').style.display = 'none';
-                    document.getElementById('estoque-conteudo').style.display = 'block';
-                }
-            } catch (error) {
-                console.error('Erro ao carregar estoque:', error);
-                document.getElementById('estoque-loading').innerHTML = 
-                    '<div class="alerta alerta-erro">Erro ao carregar estoque. Tente novamente.</div>';
-            }
-        }
-        
-        // ============================================
-        // REGULAR DOAÇÃO
-        // ============================================
-        
-        async function registrarDoacao() {
-            const produtoId = document.getElementById('doacao-produto').value;
-            const quantidade = document.getElementById('doacao-quantidade').value;
-            const doador = document.getElementById('doacao-doador').value;
-            const data = document.getElementById('doacao-data').value || new Date().toISOString().split('T')[0];
-            const obs = document.getElementById('doacao-obs').value;
-            
-            const feedback = document.getElementById('doacao-feedback');
-            
-            if (!produtoId || !quantidade || !doador) {
-                feedback.innerHTML = '<div class="alerta alerta-erro">Preencha todos os campos obrigatórios (*)</div>';
-                return;
-            }
-            
-            feedback.innerHTML = '<div class="alerta alerta-info">Salvando...</div>';
-            
-            try {
-                const response = await fetch(`${API_URL}/doacoes`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        produto_id: parseInt(produtoId),
-                        quantidade: parseFloat(quantidade),
-                        doador: doador,
-                        data: data,
-                        observacao: obs
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.sucesso) {
-                    feedback.innerHTML = '<div class="alerta alerta-sucesso">✅ Doação registrada com sucesso!</div>';
-                    
-                    // Limpar formulário
-                    document.getElementById('doacao-produto').value = '';
-                    document.getElementById('doacao-quantidade').value = '';
-                    document.getElementById('doacao-doador').value = '';
-                    document.getElementById('doacao-data').value = '';
-                    document.getElementById('doacao-obs').value = '';
-                    
-                    // Recarregar estoque após 1 segundo
-                    setTimeout(() => carregarEstoque(), 1000);
-                } else {
-                    feedback.innerHTML = `<div class="alerta alerta-erro">❌ ${result.erro}</div>`;
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-                feedback.innerHTML = '<div class="alerta alerta-erro">❌ Erro ao conectar. Verifique sua internet.</div>';
-            }
-        }
-        
-        // ============================================
-        // REGISTRAR DISTRIBUIÇÃO
-        // ============================================
-        
-        async function registrarDistribuicao() {
-            const produtoId = document.getElementById('dist-produto').value;
-            const quantidade = document.getElementById('dist-quantidade').value;
-            const beneficiario = document.getElementById('dist-beneficiario').value;
-            const data = document.getElementById('dist-data').value || new Date().toISOString().split('T')[0];
-            const obs = document.getElementById('dist-obs').value;
-            
-            const feedback = document.getElementById('dist-feedback');
-            
-            if (!produtoId || !quantidade || !beneficiario) {
-                feedback.innerHTML = '<div class="alerta alerta-erro">Preencha todos os campos obrigatórios (*)</div>';
-                return;
-            }
-            
-            feedback.innerHTML = '<div class="alerta alerta-info">Salvando...</div>';
-            
-            try {
-                const response = await fetch(`${API_URL}/distribuicoes`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        produto_id: parseInt(produtoId),
-                        quantidade: parseFloat(quantidade),
-                        beneficiario: beneficiario,
-                        data: data,
-                        observacao: obs
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.sucesso) {
-                    feedback.innerHTML = '<div class="alerta alerta-sucesso">✅ Distribuição registrada com sucesso!</div>';
-                    
-                    document.getElementById('dist-produto').value = '';
-                    document.getElementById('dist-quantidade').value = '';
-                    document.getElementById('dist-beneficiario').value = '';
-                    document.getElementById('dist-data').value = '';
-                    document.getElementById('dist-obs').value = '';
-                    
-                    setTimeout(() => carregarEstoque(), 1000);
-                } else {
-                    feedback.innerHTML = `<div class="alerta alerta-erro">❌ ${result.erro}</div>`;
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-                feedback.innerHTML = '<div class="alerta alerta-erro">❌ Erro ao conectar. Verifique sua internet.</div>';
-            }
-        }
-        
-        // ============================================
-        // HISTÓRICO
-        // ============================================
-        
-        let historicoTipo = 'doacoes';
-        
-        async function filtrarHistorico(tipo) {
-            historicoTipo = tipo;
-            
-            // Atualizar botões
-            document.getElementById('btn-historico-doacoes').style.background = tipo === 'doacoes' ? '#2d6a4f' : '#e2e8f0';
-            document.getElementById('btn-historico-doacoes').style.color = tipo === 'doacoes' ? 'white' : '#4a5568';
-            document.getElementById('btn-historico-distribuicoes').style.background = tipo === 'distribuicoes' ? '#f9c74f' : '#e2e8f0';
-            document.getElementById('btn-historico-distribuicoes').style.color = tipo === 'distribuicoes' ? '#1a1a2e' : '#4a5568';
-            
-            const lista = document.getElementById('historico-lista');
-            const loading = document.getElementById('historico-loading');
-            
-            loading.style.display = 'block';
-            lista.style.display = 'none';
-            
-            try {
-                const endpoint = tipo === 'doacoes' ? '/doacoes' : '/distribuicoes';
-                const response = await fetch(`${API_URL}${endpoint}`);
-                const data = await response.json();
-                
-                const items = data[tipo] || [];
-                
-                loading.style.display = 'none';
-                lista.style.display = 'block';
-                
-                if (items.length === 0) {
-                    lista.innerHTML = '<div class="sem-dados"><div class="icon">📭</div><p>Nenhum registro encontrado</p></div>';
-                } else {
-                    lista.innerHTML = items.map(item => {
-                        const tipoIcon = tipo === 'doacoes' ? '📦' : '📤';
-                        const tipoLabel = tipo === 'doacoes' ? 'Doação' : 'Distribuição';
-                        const quem = tipo === 'doacoes' ? item.doador : item.beneficiario;
-                        
-                        return `
-                            <div class="lista-item">
-                                <div class="info">
-                                    <div class="titulo">${tipoIcon} ${item.produto_nome}</div>
-                                    <div class="detalhes">
-                                        ${tipoLabel}: ${quem} | ${item.quantidade} ${item.unidade} | ${item.data}
-                                        ${item.observacao ? '<br><small>📝 ' + item.observacao + '</small>' : ''}
-                                    </div>
-                                </div>
-                                <div class="acao">#${item.id}</div>
-                            </div>
-                        `;
-                    }).join('');
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-                loading.innerHTML = '<div class="alerta alerta-erro">Erro ao carregar histórico</div>';
-            }
-        }
-        
-        // ============================================
-        // INICIALIZAÇÃO
-        // ============================================
-        
-        // Definir data padrão nos inputs de data
-        document.addEventListener('DOMContentLoaded', () => {
-            const hoje = new Date().toISOString().split('T')[0];
-            document.getElementById('doacao-data').value = hoje;
-            document.getElementById('dist-data').value = hoje;
-            
-            // Carregar produtos para os selects
-            carregarProdutos('doacao-produto');
-            carregarProdutos('dist-produto');
+
+        lista.innerHTML = produtos.map(p => `
+            <div class="produto">
+                <div class="nome">${p.nome}</div>
+                <div class="qtd">Estoque: ${p.quantidade}</div>
+            </div>
+        `).join('');
+
+        const produtoSelects = document.querySelectorAll('select');
+        produtoSelects.forEach(s => {
+            s.innerHTML = produtos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
         });
-        
-        // ============================================
-        // SERVICE WORKER (PWA)
-        // ============================================
-        
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('SW registrado:', reg.scope))
-                    .catch(err => console.log('Erro SW:', err));
-            });
-        }
-    </script>
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function registrarDoacao() {
+    const produto = document.getElementById('produto-select').value;
+    const qtd = document.getElementById('qtd-doacao').value;
+    const doador = document.getElementById('nome-doador').value;
+    const obs = document.getElementById('obs-doacao').value;
+
+    if (!produto || !qtd || !doador) {
+        alert('Preencha produto, quantidade e nome do doador');
+        return;
+    }
+
+    await fetch('/api/doacoes', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({produto_id: produto, quantidade: parseFloat(qtd), doador, observacao: obs})
+    });
+
+    limparCampos();
+    await atualizar();
+}
+
+async function registrarDistribuicao() {
+    const produto = document.getElementById('produto-dist').value;
+    const qtd = document.getElementById('qtd-dist').value;
+    const benef = document.getElementById('nome-benef').value;
+    const obs = document.getElementById('obs-dist').value;
+
+    if (!produto || !qtd || !benef) {
+        alert('Preencha produto, quantidade e nome do beneficiário');
+        return;
+    }
+
+    const res = await fetch('/api/distribuicoes', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({produto_id: produto, quantidade: parseFloat(qtd), beneficiario: benef, observacao: obs})
+    });
+
+    const data = await res.json();
+    if (!data.sucesso) alert(data.erro || 'Erro');
+
+    limparCampos();
+    await atualizar();
+}
+
+function limparCampos() {
+    document.getElementById('qtd-doacao').value = '';
+    document.getElementById('nome-doador').value = '';
+    document.getElementById('obs-doacao').value = '';
+    document.getElementById('qtd-dist').value = '';
+    document.getElementById('nome-benef').value = '';
+    document.getElementById('obs-dist').value = '';
+}
+
+atualizar();
+setInterval(atualizar, 30000);
+</script>
 </body>
 </html>
