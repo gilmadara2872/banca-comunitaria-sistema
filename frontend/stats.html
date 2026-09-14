@@ -4,164 +4,240 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📊 Dashboard Banca Comunitária</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 16px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; padding: 16px; }
         .container { max-width: 480px; margin: 0 auto; }
-        h1 { font-size: 20px; margin-bottom: 16px; color: #333; text-align: center; }
-        .card { background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .card h2 { font-size: 16px; color: #333; margin-bottom: 12px; }
-        .chart-container { position: relative; width: 100%; height: 250px; }
-        .stat { text-align: center; padding: 12px; margin-bottom: 8px; border-radius: 6px; }
-        .stat-total { background: #e8f4fd; border-left: 4px solid #007bff; }
-        .stat-zero { background: #fff3cd; border-left: 4px solid #ffc107; }
-        .stat-low { background: #d4edda; border-left: 4px solid #28a745; }
-        .stat-label { font-size: 12px; color: #666; margin-bottom: 4px; }
-        .stat-number { font-size: 24px; font-weight: bold; }
-        .stat-number.green { color: #28a745; }
-        .stat-number.yellow { color: #856404; }
-        .stat-number.blue { color: #007bff; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
-        th { background: #f8f9fa; font-weight: 600; }
-        tr:hover { background: #f8f9fa; }
-        .loading { text-align: center; padding: 40px; color: #999; }
-        @media (max-width: 400px) {
-            .stat-number { font-size: 20px; }
-        }
+        h1 { font-size: 22px; margin-bottom: 16px; color: #1a1a1a; text-align: center; }
+        .back-btn { display: inline-block; color: #007bff; text-decoration: none; margin-bottom: 12px; font-size: 14px; }
+        .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .card h2 { font-size: 15px; color: #333; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .chart-wrap { position: relative; width: 100%; height: 280px; }
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+        .stat-box { background: white; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .stat-num { font-size: 22px; font-weight: bold; }
+        .stat-num.blue { color: #007bff; }
+        .stat-num.red { color: #dc3545; }
+        .stat-num.green { color: #28a745; }
+        .stat-lbl { font-size: 11px; color: #666; margin-top: 4px; }
+        
+        /* Filtros */
+        .filtros { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .filtro-grupo { flex: 1; min-width: 100px; }
+        .filtro-grupo label { font-size: 11px; color: #666; display: block; margin-bottom: 4px; }
+        .filtro-grupo input, .filtro-grupo select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+        .btn-filtrar { background: #007bff; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .btn-filtrar:active { background: #0056b3; }
+        .btn-export { background: #28a745; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; margin-left: 8px; }
+        
+        /* Tabela Histórico */
+        .tab-wrapper { overflow-x: auto; max-height: 400px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { position: sticky; top: 0; background: #f8f9fa; padding: 10px 8px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #dee2e6; }
+        td { padding: 10px 8px; border-bottom: 1px solid #f0f0f0; }
+        tr:hover td { background: #f8f9fa; }
+        .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-in { background: #d4edda; color: #155724; }
+        .badge-out { background: #f8d7da; color: #721c24; }
+        .total-row { background: #e8f4fd !important; font-weight: 600; }
+        .empty { text-align: center; padding: 40px; color: #999; }
     </style>
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <div class="container">
+    <a href="/" class="back-btn">← Voltar ao app</a>
     <h1>📊 Dashboard da Banca</h1>
     
-    <div class="resumo-cards">
-        <div class="stat stat-total">
-            <div class="stat-label">Total de Produtos</div>
-            <div class="stat-number blue" id="total-produtos">-</div>
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-num blue" id="s-total">-</div>
+            <div class="stat-lbl">Produtos</div>
         </div>
-        <div class="stat stat-zero">
-            <div class="stat-label">Sem Estoque</div>
-            <div class="stat-number" id="sem-estoque">-</div>
+        <div class="stat-box">
+            <div class="stat-num red" id="s-zero">-</div>
+            <div class="stat-lbl">Sem Estoque</div>
         </div>
-        <div class="stat stat-low">
-            <div class="stat-label">Baixo Estoque</div>
-            <div class="stat-number green" id="baixo-estoque">-</div>
-        </div>
-    </div>
-
-    <div class="card">
-        <h2>📈 Estoque por Produto</h2>
-        <div class="chart-container">
-            <canvas id="produtoChart"></canvas>
+        <div class="stat-box">
+            <div class="stat-num green" id="s-baixo">-</div>
+            <div class="stat-lbl">Baixo Estoque</div>
         </div>
     </div>
 
     <div class="card">
-        <h2>📦 Entradas vs Saídas</h2>
-        <div class="chart-container">
-            <canvas id="movimentoChart"></canvas>
-        </div>
+        <h2>🍕 Estoque por Produto</h2>
+        <div class="chart-wrap"><canvas id="pieEstoque"></canvas></div>
     </div>
 
     <div class="card">
-        <h2>📋 Últimas 10 Doações</h2>
-        <table>
-            <thead>
-                <tr><th>Data</th><th>Produto</th><th>Qtd</th><th>Doador</th></tr>
-            </thead>
-            <tbody id="doacoes-tbody"></tbody>
-        </table>
+        <h2>📊 Entradas vs Saídas (por produto)</h2>
+        <div class="chart-wrap"><canvas id="barMovimento"></canvas></div>
+    </div>
+
+    <div class="card">
+        <h2>📋 Histórico Completo</h2>
+        <div class="filtros">
+            <div class="filtro-grupo">
+                <label>De</label>
+                <input type="date" id="filtro-de">
+            </div>
+            <div class="filtro-grupo">
+                <label>Até</label>
+                <input type="date" id="filtro-ate">
+            </div>
+            <div class="filtro-grupo">
+                <label>Tipo</label>
+                <select id="filtro-tipo">
+                    <option value="todos">Todos</option>
+                    <option value="doacao">Doações</option>
+                    <option value="distribuicao">Distribuições</option>
+                </select>
+            </div>
+            <button class="btn-filtrar" onclick="filtrar()">Filtrar</button>
+            <button class="btn-export" onclick="exportarCSV()">CSV</button>
+        </div>
+        <div class="tab-wrapper">
+            <table>
+                <thead>
+                    <tr><th>Data</th><th>Tipo</th><th>Produto</th><th>Qtd</th><th>Pessoa</th></tr>
+                </thead>
+                <tbody id="tab-historico"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
+                <tfoot><tr class="total-row" id="tab-total"></tr></tfoot>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
-let produtoChart, movimentoChart;
+let dadosCache = { doacoes: [], distribuicoes: [] };
 
-async function carregarDados() {
+async function carregarTudo() {
     try {
-        const [estoqueRes, doacoesRes] = await Promise.all([
+        const [estoqueR, doacoesR, distR] = await Promise.all([
             fetch('/api/estoque'),
-            fetch('/api/doacoes?limit=10')
+            fetch('/api/doacoes?limit=500'),
+            fetch('/api/distribuicoes?limit=500')
         ]);
         
-        const estoque = await estoqueRes.json();
-        const doacoes = await doacoesRes.json();
+        const estoque = await estoqueR.json();
+        dadosCache.doacoes = (await doacoesR.json()).doacoes || [];
+        dadosCache.distribuicoes = (await distR.json()).distribuicoes || [];
+        
+        document.getElementById('s-total').textContent = estoque.resumo?.total_produtos || 12;
+        document.getElementById('s-zero').textContent = estoque.resumo?.sem_estoque || 0;
+        document.getElementById('s-baixo').textContent = estoque.resumo?.baixo_estoque || 0;
 
-        document.getElementById('total-produtos').textContent = estoque.resumo?.total_produtos || 12;
-        document.getElementById('sem-estoque').textContent = estoque.resumo?.sem_estoque || 0;
-        document.getElementById('baixo-estoque').textContent = estoque.resumo?.baixo_estoque || 0;
-
-        // Gráfico de pizza - estoque por produto
-        const produtosComEstoque = (estoque.produtos || []).filter(p => p.quantidade > 0);
-        const labels = produtosComEstoque.map(p => p.nome);
-        const data = produtosComEstoque.map(p => p.quantidade);
-        const colors = produtosComEstoque.map(p => {
-            if (p.quantidade === 0) return '#dc3545';
-            if (p.quantidade < 5) return '#ffc107';
-            return '#28a745';
-        });
-
-        if (produtoChart) produtoChart.destroy();
-        produtoChart = new Chart(document.getElementById('produtoChart'), {
-            type: 'pie',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: data.length ? colors : ['#ccc'],
-                    borderWidth: 2
-                }]
-            },
+        // Gráfico Pizza - Estoque atual
+        const produtos = estoque.produtos || [];
+        const labels = produtos.map(p => p.nome);
+        const valores = produtos.map(p => p.quantidade);
+        const cores = produtos.map(p => 
+            p.quantidade === 0 ? '#dc3545' : 
+            p.quantidade < 5 ? '#ffc107' : '#28a745'
+        );
+        
+        new Chart(document.getElementById('pieEstoque'), {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data: valores, backgroundColor: cores, borderWidth: 2, borderColor: '#fff' }] },
             options: {
                 responsive: true,
-                plugins: {
-                    legend: { position: 'bottom', labels: { font: { size: 10 } } }
-                }
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 12 } } }
             }
         });
 
-        // Gráfico de barras - doações vs distribuições (simulado)
-        if (movimentoChart) movimentoChart.destroy();
-        movimentoChart = new Chart(document.getElementById('movimentoChart'), {
+        // Gráfico Barras - Entradas vs Saídas por produto
+        const entradas = {};
+        const saidas = {};
+        dadosCache.doacoes.forEach(d => entradas[d.nome] = (entradas[d.nome]||0) + d.quantidade);
+        dadosCache.distribuicoes.forEach(d => saidas[d.nome] = (saidas[d.nome]||0) + d.quantidade);
+        
+        const todosNomes = [...new Set([...Object.keys(entradas), ...Object.keys(saidas)])].sort();
+        
+        new Chart(document.getElementById('barMovimento'), {
             type: 'bar',
             data: {
-                labels: ['Doações', 'Distribuições'],
-                datasets: [{
-                    label: 'Quantidade',
-                    data: [doacoes.doacoes?.length || 0, 0], // Simples por enquanto
-                    backgroundColor: ['#28a745', '#dc3545'],
-                    borderRadius: 4
-                }]
+                labels: todosNomes.length ? todosNomes : ['Sem dados'],
+                datasets: [
+                    { label: 'Entradas', data: todosNomes.map(n => entradas[n]||0), backgroundColor: '#28a745', borderRadius: 4 },
+                    { label: 'Saídas', data: todosNomes.map(n => saidas[n]||0), backgroundColor: '#dc3545', borderRadius: 4 }
+                ]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 scales: { y: { beginAtZero: true } },
-                plugins: { legend: { display: false } }
+                plugins: { legend: { position: 'top' } }
             }
         });
 
-        // Tabela de doações
-        const tbody = document.getElementById('doacoes-tbody');
-        tbody.innerHTML = (doacoes.doacoes || []).map(d => `
-            <tr>
-                <td>${d.data || '-'}</td>
-                <td>${d.nome}</td>
-                <td>${d.quantidade}</td>
-                <td>${d.doador}</td>
-            </tr>
-        `).join('') || '<tr><td colspan="4" class="loading">Nenhuma doação registrada</td></tr>';
-
-    } catch (e) {
+        filtrar();
+    } catch(e) {
         console.error(e);
-        document.querySelector('.card').innerHTML = '<div class="loading">Erro ao carregar dados</div>';
     }
 }
 
-carregarDados();
-setInterval(carregarDados, 30000);
+function filtrar() {
+    const de = document.getElementById('filtro-de').value;
+    const ate = document.getElementById('filtro-ate').value;
+    const tipo = document.getElementById('filtro-tipo').value;
+    
+    let itens = [];
+    
+    if (tipo === 'todos' || tipo === 'doacao') {
+        dadosCache.doacoes.forEach(d => itens.push({ ...d, tipo: 'doacao', pessoa: d.doador }));
+    }
+    if (tipo === 'todos' || tipo === 'distribuicao') {
+        dadosCache.distribuicoes.forEach(d => itens.push({ ...d, tipo: 'distribuicao', pessoa: d.beneficiario }));
+    }
+    
+    // Filtro data
+    if (de) itens = itens.filter(i => i.data >= de);
+    if (ate) itens = itens.filter(i => i.data <= ate);
+    
+    // Ordenar data desc
+    itens.sort((a, b) => b.data.localeCompare(a.data));
+    
+    const tbody = document.getElementById('tab-historico');
+    const tTotal = document.getElementById('tab-total');
+    
+    if (!itens.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum registro encontrado</td></tr>';
+        tTotal.innerHTML = '';
+        return;
+    }
+    
+    tbody.innerHTML = itens.map(i => `
+        <tr>
+            <td>${i.data}</td>
+            <td><span class="badge ${i.tipo==='doacao'?'badge-in':'badge-out'}">${i.tipo==='doacao'?'Entrada':'Saída'}</span></td>
+            <td>${i.nome}</td>
+            <td>${i.quantidade} ${i.unidade||''}</td>
+            <td>${i.pessoa}</td>
+        </tr>
+    `).join('');
+    
+    const totalIn = itens.filter(i=>i.tipo==='doacao').reduce((a,b)=>a+b.quantidade, 0);
+    const totalOut = itens.filter(i=>i.tipo==='distribuicao').reduce((a,b)=>a+b.quantidade, 0);
+    tTotal.innerHTML = `<td colspan="3">TOTAL</td><td>+${totalIn.toFixed(1)} / -${totalOut.toFixed(1)}</td><td>${itens.length} registros</td>`;
+}
+
+function exportarCSV() {
+    const rows = [['Data','Tipo','Produto','Quantidade','Unidade','Pessoa']];
+    document.querySelectorAll('#tab-historico tr').forEach(tr => {
+        const cells = tr.querySelectorAll('td');
+        if (cells.length >= 5) rows.push([...cells].map(c => c.textContent.trim()));
+    });
+    const csv = rows.map(r => r.join(';')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `banca-relatorio-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+}
+
+carregarTudo();
 </script>
 </body>
 </html>

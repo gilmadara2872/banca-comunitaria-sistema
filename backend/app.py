@@ -160,10 +160,11 @@ def stats():
 def dados_endpoint():
     """Retorna dados para o dashboard"""
     try:
-        from db import listar_produtos, listar_doacoes
+        from db import listar_produtos, listar_doacoes, listar_distribuicoes
         return jsonify({
             'produtos': listar_produtos(),
-            'doacoes': listar_doacoes(10)
+            'doacoes': listar_doacoes(100),
+            'distribuicoes': listar_distribuicoes(100)
         })
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
