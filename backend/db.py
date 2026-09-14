@@ -3,12 +3,24 @@ Database module - SQLAlchemy with PostgreSQL support
 Environment: DATABASE_URL (PostgreSQL URL) or falls back to SQLite file
 """
 import os
-from datetime import date
+from datetime import date, datetime
 from sqlalchemy import create_engine, Column, Integer, String, Float, Date, Text, ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
 Base = declarative_base()
+
+
+def parse_date(data):
+    """Converte string ISO (YYYY-MM-DD) para objeto date"""
+    if data is None:
+        return date.today()
+    if isinstance(data, date):
+        return data
+    if isinstance(data, str):
+        return datetime.strptime(data, '%Y-%m-%d').date()
+    return date.today()
+
 
 class Produto(Base):
     __tablename__ = 'produtos'
@@ -20,6 +32,7 @@ class Produto(Base):
     doacoes = relationship("Doacao", back_populates="produto")
     distribuicoes = relationship("Distribuicao", back_populates="produto")
 
+
 class Doacao(Base):
     __tablename__ = 'doacoes'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -30,6 +43,7 @@ class Doacao(Base):
     observacao = Column(Text, nullable=True)
     
     produto = relationship("Produto", back_populates="doacoes")
+
 
 class Distribuicao(Base):
     __tablename__ = 'distribuicoes'
@@ -43,19 +57,16 @@ class Distribuicao(Base):
     produto = relationship("Produto", back_populates="distribuicoes")
 
 
-# Database setup
 def get_engine():
     """Create engine from DATABASE_URL or SQLite fallback"""
     db_url = os.environ.get('DATABASE_URL')
     if db_url:
-        # Railway provides DATABASE_URL in format: postgres://user:pass@host:5432/db
-        # SQLAlchemy needs postgresql:// scheme
         if db_url.startswith('postgres://'):
             db_url = db_url.replace('postgres://', 'postgresql://', 1)
         return create_engine(db_url)
     else:
-        # Fallback to SQLite for local development
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'banca.db')
+        # Use current working directory for SQLite fallback
+        db_path = os.path.join(os.getcwd(), 'banca.db')
         return create_engine(f'sqlite:///{db_path}')
 
 
@@ -71,7 +82,6 @@ def init_db():
     session, engine = get_session()
     Base.metadata.create_all(engine)
     
-    # Check if products already exist
     if session.query(Produto).count() == 0:
         produtos_iniciais = [
             Produto(nome='Arroz', unidade='saco'),
@@ -116,17 +126,15 @@ def adicionar_doacao(produto_id, quantidade, doador, data, observacao=''):
     """Registra uma doação e atualiza estoque"""
     session, _ = get_session()
     
-    # Inserir doação
     doacao = Doacao(
         produto_id=produto_id,
         quantidade=quantidade,
         doador=doador,
-        data=data or date.today(),
+        data=parse_date(data),
         observacao=observacao
     )
     session.add(doacao)
     
-    # Atualizar estoque (+)
     produto = session.query(Produto).filter_by(id=produto_id).first()
     if produto:
         produto.estoque_atual += quantidade
@@ -141,21 +149,17 @@ def adicionar_distribuicao(produto_id, quantidade, beneficiario, data, observaca
     """Registra uma distribuição e reduz estoque"""
     session, _ = get_session()
     
-    # Verificar estoque suficiente
     produto = session.query(Produto).filter_by(id=produto_id).first()
     
     if produto and produto.estoque_atual >= quantidade:
-        # Inserir distribuição
         distribuicao = Distribuicao(
             produto_id=produto_id,
             quantidade=quantidade,
             beneficiario=beneficiario,
-            data=data or date.today(),
+            data=parse_date(data),
             observacao=observacao
         )
         session.add(distribuicao)
-        
-        # Atualizar estoque (-)
         produto.estoque_atual -= quantidade
         
         session.commit()
@@ -171,20 +175,14 @@ def listar_doacoes(limit=50):
     """Lista últimas doações"""
     session, _ = get_session()
     q = session.query(
-        Doacao.id,
-        Doacao.quantidade,
-        Doacao.doador,
-        Doacao.data,
-        Doacao.observacao,
-        Produto.nome.label('produto_nome'),
-        Produto.unidade.label('unidade')
+        Doacao.id, Doacao.quantidade, Doacao.doador, Doacao.data, Doacao.observacao,
+        Produto.nome.label('produto_nome'), Produto.unidade.label('unidade')
     ).join(Produto).order_by(Doacao.data.desc(), Doacao.id.desc()).limit(limit)
     
     resultados = [{
         'id': r.id, 'quantidade': r.quantidade, 'doador': r.doador,
         'data': r.data.isoformat() if r.data else None,
-        'observacao': r.observacao,
-        'nome': r.produto_nome, 'unidade': r.unidade
+        'observacao': r.observacao, 'nome': r.produto_nome, 'unidade': r.unidade
     } for r in q.all()]
     session.close()
     return resultados
@@ -194,20 +192,15 @@ def listar_distribuicoes(limit=50):
     """Lista últimas distribuições"""
     session, _ = get_session()
     q = session.query(
-        Distribuicao.id,
-        Distribuicao.quantidade,
-        Distribuicao.beneficiario,
-        Distribuicao.data,
-        Distribuicao.observacao,
-        Produto.nome.label('produto_nome'),
-        Produto.unidade.label('unidade')
+        Distribuicao.id, Distribuicao.quantidade, Distribuicao.beneficiario,
+        Distribuicao.data, Distribuicao.observacao,
+        Produto.nome.label('produto_nome'), Produto.unidade.label('unidade')
     ).join(Produto).order_by(Distribuicao.data.desc(), Distribuicao.id.desc()).limit(limit)
     
     resultados = [{
         'id': r.id, 'quantidade': r.quantidade, 'beneficiario': r.beneficiario,
         'data': r.data.isoformat() if r.data else None,
-        'observacao': r.observacao,
-        'nome': r.produto_nome, 'unidade': r.unidade
+        'observacao': r.observacao, 'nome': r.produto_nome, 'unidade': r.unidade
     } for r in q.all()]
     session.close()
     return resultados
