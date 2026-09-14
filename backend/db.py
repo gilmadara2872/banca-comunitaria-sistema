@@ -1,204 +1,235 @@
-import sqlite3
+"""
+Database module - SQLAlchemy with PostgreSQL support
+Environment: DATABASE_URL (PostgreSQL URL) or falls back to SQLite file
+"""
 import os
 from datetime import date
+from sqlalchemy import create_engine, Column, Integer, String, Float, Date, Text, ForeignKey, func
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'banca.db')
+Base = declarative_base()
 
-def get_db():
-    """Retorna conexão com banco de dados"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+class Produto(Base):
+    __tablename__ = 'produtos'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nome = Column(String(100), nullable=False, unique=True)
+    unidade = Column(String(50), nullable=False)
+    estoque_atual = Column(Float, default=0)
+    
+    doacoes = relationship("Doacao", back_populates="produto")
+    distribuicoes = relationship("Distribuicao", back_populates="produto")
+
+class Doacao(Base):
+    __tablename__ = 'doacoes'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    produto_id = Column(Integer, ForeignKey('produtos.id'), nullable=False)
+    quantidade = Column(Float, nullable=False)
+    doador = Column(String(200), nullable=False)
+    data = Column(Date, nullable=False, default=date.today)
+    observacao = Column(Text, nullable=True)
+    
+    produto = relationship("Produto", back_populates="doacoes")
+
+class Distribuicao(Base):
+    __tablename__ = 'distribuicoes'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    produto_id = Column(Integer, ForeignKey('produtos.id'), nullable=False)
+    quantidade = Column(Float, nullable=False)
+    beneficiario = Column(String(200), nullable=False)
+    data = Column(Date, nullable=False, default=date.today)
+    observacao = Column(Text, nullable=True)
+    
+    produto = relationship("Produto", back_populates="distribuicoes")
+
+
+# Database setup
+def get_engine():
+    """Create engine from DATABASE_URL or SQLite fallback"""
+    db_url = os.environ.get('DATABASE_URL')
+    if db_url:
+        # Railway provides DATABASE_URL in format: postgres://user:pass@host:5432/db
+        # SQLAlchemy needs postgresql:// scheme
+        if db_url.startswith('postgres://'):
+            db_url = db_url.replace('postgres://', 'postgresql://', 1)
+        return create_engine(db_url)
+    else:
+        # Fallback to SQLite for local development
+        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'banca.db')
+        return create_engine(f'sqlite:///{db_path}')
+
+
+def get_session():
+    """Get database session"""
+    engine = get_engine()
+    Session = sessionmaker(bind=engine)
+    return Session(), engine
+
 
 def init_db():
-    """Cria tabelas iniciais se não existirem"""
-    conn = get_db()
-    cursor = conn.cursor()
+    """Create tables and insert initial products"""
+    session, engine = get_session()
+    Base.metadata.create_all(engine)
     
-    # Tabela de produtos
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS produtos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT NOT NULL UNIQUE,
-            unidade TEXT NOT NULL,
-            estoque_atual REAL DEFAULT 0
-        )
-    ''')
+    # Check if products already exist
+    if session.query(Produto).count() == 0:
+        produtos_iniciais = [
+            Produto(nome='Arroz', unidade='saco'),
+            Produto(nome='Feijão', unidade='saco'),
+            Produto(nome='Óleo de cozinha', unidade='garrafa'),
+            Produto(nome='Leite em pó', unidade='caixa'),
+            Produto(nome='Açúcar', unidade='saco'),
+            Produto(nome='Farinha de trigo', unidade='saco'),
+            Produto(nome='Café em pó', unidade='caixa'),
+            Produto(nome='Sal', unidade='pacote'),
+            Produto(nome='Macarrão', unidade='pacote'),
+            Produto(nome='Cuscuz', unidade='saco'),
+            Produto(nome='Gelatina', unidade='unidade'),
+            Produto(nome='Chocolate em pó', unidade='caixa'),
+        ]
+        session.add_all(produtos_iniciais)
+        session.commit()
     
-    # Tabela de doações
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS doacoes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            produto_id INTEGER NOT NULL,
-            quantidade REAL NOT NULL,
-            doador TEXT NOT NULL,
-            data DATE NOT NULL,
-            observacao TEXT,
-            FOREIGN KEY (produto_id) REFERENCES produtos(id)
-        )
-    ''')
-    
-    # Tabela de distribuições
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS distribuicoes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            produto_id INTEGER NOT NULL,
-            quantidade REAL NOT NULL,
-            beneficiario TEXT NOT NULL,
-            data DATE NOT NULL,
-            observacao TEXT,
-            FOREIGN KEY (produto_id) REFERENCES produtos(id)
-        )
-    ''')
-    
-    conn.commit()
-    
-    # Inserir produtos iniciais se não existirem
-    produtos_iniciais = [
-        ('Arroz', 'saco', 0),
-        ('Feijão', 'saco', 0),
-        ('Óleo de cozinha', 'garrafa', 0),
-        ('Leite em pó', 'caixa', 0),
-        ('Açúcar', 'saco', 0),
-        ('Farinha de trigo', 'saco', 0),
-        ('Café em pó', 'caixa', 0),
-        ('Sal', 'pacote', 0),
-        ('Macarrão', 'pacote', 0),
-        ('Cuscuz', 'saco', 0),
-        ('Gelatina', 'unidade', 0),
-        ('Chocolate em pó', 'caixa', 0),
-    ]
-    
-    for nome, unidade, estoque in produtos_iniciais:
-        try:
-            cursor.execute('INSERT OR IGNORE INTO produtos (nome, unidade, estoque_atual) VALUES (?, ?, ?)',
-                          (nome, unidade, estoque))
-        except sqlite3.IntegrityError:
-            pass
-    
-    conn.commit()
-    conn.close()
+    session.close()
+
 
 def listar_produtos():
     """Lista todos os produtos com estoque atual"""
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, nome, unidade, estoque_atual FROM produtos ORDER BY nome')
-    resultados = [dict(row) for row in cursor.fetchall()]
-    conn.close()
+    session, _ = get_session()
+    produtos = session.query(Produto).order_by(Produto.nome).all()
+    resultados = [{'id': p.id, 'nome': p.nome, 'unidade': p.unidade, 'quantidade': p.estoque_atual} for p in produtos]
+    session.close()
     return resultados
+
 
 def atualizar_estoque(produto_id, quantidade):
     """Atualiza estoque (positivo = entrada, negativo = saída)"""
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('UPDATE produtos SET estoque_atual = estoque_atual + ? WHERE id = ?',
-                  (quantidade, produto_id))
-    conn.commit()
-    conn.close()
+    session, _ = get_session()
+    produto = session.query(Produto).filter_by(id=produto_id).first()
+    if produto:
+        produto.estoque_atual += quantidade
+        session.commit()
+    session.close()
+
 
 def adicionar_doacao(produto_id, quantidade, doador, data, observacao=''):
     """Registra uma doação e atualiza estoque"""
-    conn = get_db()
-    cursor = conn.cursor()
+    session, _ = get_session()
     
     # Inserir doação
-    cursor.execute('''
-        INSERT INTO doacoes (produto_id, quantidade, doador, data, observacao)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (produto_id, quantidade, doador, data, observacao))
+    doacao = Doacao(
+        produto_id=produto_id,
+        quantidade=quantidade,
+        doador=doador,
+        data=data or date.today(),
+        observacao=observacao
+    )
+    session.add(doacao)
     
     # Atualizar estoque (+)
-    cursor.execute('UPDATE produtos SET estoque_atual = estoque_atual + ? WHERE id = ?',
-                  (quantidade, produto_id))
+    produto = session.query(Produto).filter_by(id=produto_id).first()
+    if produto:
+        produto.estoque_atual += quantidade
     
-    conn.commit()
-    doacao_id = cursor.lastrowid
-    conn.close()
+    session.commit()
+    doacao_id = doacao.id
+    session.close()
     return doacao_id
+
 
 def adicionar_distribuicao(produto_id, quantidade, beneficiario, data, observacao=''):
     """Registra uma distribuição e reduz estoque"""
-    conn = get_db()
-    cursor = conn.cursor()
+    session, _ = get_session()
     
     # Verificar estoque suficiente
-    cursor.execute('SELECT estoque_atual FROM produtos WHERE id = ?', (produto_id,))
-    resultado = cursor.fetchone()
+    produto = session.query(Produto).filter_by(id=produto_id).first()
     
-    if resultado and resultado['estoque_atual'] >= quantidade:
+    if produto and produto.estoque_atual >= quantidade:
         # Inserir distribuição
-        cursor.execute('''
-            INSERT INTO distribuicoes (produto_id, quantidade, beneficiario, data, observacao)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (produto_id, quantidade, beneficiario, data, observacao))
+        distribuicao = Distribuicao(
+            produto_id=produto_id,
+            quantidade=quantidade,
+            beneficiario=beneficiario,
+            data=data or date.today(),
+            observacao=observacao
+        )
+        session.add(distribuicao)
         
         # Atualizar estoque (-)
-        cursor.execute('UPDATE produtos SET estoque_atual = estoque_atual - ? WHERE id = ?',
-                      (quantidade, produto_id))
+        produto.estoque_atual -= quantidade
         
-        conn.commit()
-        distribuicao_id = cursor.lastrowid
-        conn.close()
+        session.commit()
+        distribuicao_id = distribuicao.id
+        session.close()
         return distribuicao_id, True
     else:
-        conn.close()
+        session.close()
         return None, False
+
 
 def listar_doacoes(limit=50):
     """Lista últimas doações"""
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT d.id, d.quantidade, d.doador, d.data, d.observacao,
-               p.nome as produto_nome, p.unidade
-        FROM doacoes d
-        JOIN produtos p ON d.produto_id = p.id
-        ORDER BY d.data DESC, d.id DESC
-        LIMIT ?
-    ''', (limit,))
-    resultados = [dict(row) for row in cursor.fetchall()]
-    conn.close()
+    session, _ = get_session()
+    q = session.query(
+        Doacao.id,
+        Doacao.quantidade,
+        Doacao.doador,
+        Doacao.data,
+        Doacao.observacao,
+        Produto.nome.label('produto_nome'),
+        Produto.unidade.label('unidade')
+    ).join(Produto).order_by(Doacao.data.desc(), Doacao.id.desc()).limit(limit)
+    
+    resultados = [{
+        'id': r.id, 'quantidade': r.quantidade, 'doador': r.doador,
+        'data': r.data.isoformat() if r.data else None,
+        'observacao': r.observacao,
+        'nome': r.produto_nome, 'unidade': r.unidade
+    } for r in q.all()]
+    session.close()
     return resultados
+
 
 def listar_distribuicoes(limit=50):
     """Lista últimas distribuições"""
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT d.id, d.quantidade, d.beneficiario, d.data, d.observacao,
-               p.nome as produto_nome, p.unidade
-        FROM distribuicoes d
-        JOIN produtos p ON d.produto_id = p.id
-        ORDER BY d.data DESC, d.id DESC
-        LIMIT ?
-    ''', (limit,))
-    resultados = [dict(row) for row in cursor.fetchall()]
-    conn.close()
+    session, _ = get_session()
+    q = session.query(
+        Distribuicao.id,
+        Distribuicao.quantidade,
+        Distribuicao.beneficiario,
+        Distribuicao.data,
+        Distribuicao.observacao,
+        Produto.nome.label('produto_nome'),
+        Produto.unidade.label('unidade')
+    ).join(Produto).order_by(Distribuicao.data.desc(), Distribuicao.id.desc()).limit(limit)
+    
+    resultados = [{
+        'id': r.id, 'quantidade': r.quantidade, 'beneficiario': r.beneficiario,
+        'data': r.data.isoformat() if r.data else None,
+        'observacao': r.observacao,
+        'nome': r.produto_nome, 'unidade': r.unidade
+    } for r in q.all()]
+    session.close()
     return resultados
 
+
 def resumo_estoque():
-    """Retorna resumo do estoque (total de itens, produtos com estoque baixo)"""
-    conn = get_db()
-    cursor = conn.cursor()
+    """Retorna resumo do estoque"""
+    session, _ = get_session()
     
-    cursor.execute('SELECT COUNT(*) as total FROM produtos')
-    total_produtos = cursor.fetchone()['total']
+    total_produtos = session.query(func.count(Produto.id)).scalar() or 0
+    total_estoque = session.query(func.sum(Produto.estoque_atual)).scalar() or 0
+    baixo_estoque = session.query(func.count(Produto.id)).filter(
+        Produto.estoque_atual > 0, Produto.estoque_atual < 5
+    ).scalar() or 0
+    sem_estoque = session.query(func.count(Produto.id)).filter(
+        Produto.estoque_atual == 0
+    ).scalar() or 0
     
-    cursor.execute('SELECT SUM(estoque_atual) as total_estoque FROM produtos')
-    total_estoque = cursor.fetchone()['total_estoque'] or 0
-    
-    cursor.execute('SELECT COUNT(*) as baixo FROM produtos WHERE estoque_atual > 0 AND estoque_atual < 5')
-    baixo_estoque = cursor.fetchone()['baixo']
-    
-    cursor.execute('SELECT COUNT(*) as zero FROM produtos WHERE estoque_atual = 0')
-    sem_estoque = cursor.fetchone()['zero']
-    
-    conn.close()
+    session.close()
     return {
         'total_produtos': total_produtos,
-        'total_estoque': total_estoque,
+        'total_estoque': total_estoque or 0,
         'baixo_estoque': baixo_estoque,
         'sem_estoque': sem_estoque
     }
