@@ -111,14 +111,26 @@
 <script>
 let dadosCache = { doacoes: [], distribuicoes: [] };
 
+// Mesma protecao da tela principal: se a sessao expirar,
+// manda para o login em vez de mostrar tela quebrada.
+async function api(caminho) {
+    const res = await fetch(caminho);
+    if (res.status === 401) {
+        window.location.href = '/login';
+        return null;
+    }
+    return res;
+}
+
 async function carregarTudo() {
     try {
         const [estoqueR, doacoesR, distR] = await Promise.all([
-            fetch('/api/estoque'),
-            fetch('/api/doacoes?limit=500'),
-            fetch('/api/distribuicoes?limit=500')
+            api('/api/estoque'),
+            api('/api/doacoes?limit=500'),
+            api('/api/distribuicoes?limit=500')
         ]);
-        
+        if (!estoqueR || !doacoesR || !distR) return;
+
         const estoque = await estoqueR.json();
         dadosCache.doacoes = (await doacoesR.json()).doacoes || [];
         dadosCache.distribuicoes = (await distR.json()).distribuicoes || [];

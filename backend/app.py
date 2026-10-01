@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, session, redirect, render_template
 from flask_cors import CORS
 import os
 import sys
@@ -11,10 +11,69 @@ from db import (
     init_db, listar_produtos, adicionar_doacao, adicionar_distribuicao,
     listar_doacoes, listar_distribuicoes, resumo_estoque, atualizar_estoque
 )
+from auth import conferir_senha, autenticado, exigir_login, _senha_configurada
 
 frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend')
 app = Flask(__name__, static_folder=frontend_dir, static_url_path='')
 CORS(app)
+
+# A sessao do login precisa de uma chave secreta. Sem ela, Flask
+# recusa o login. Em dev cai num valor fixo; em producao (Railway)
+# a variavel SESSION_SECRET tem que estar definida.
+app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET') or 'dev-banca-comunitaria-chave-temporaria'
+app.config['PERMANENT_SESSION_LIFETIME'] = 60 * 60 * 12  # 12 horas
+
+# ============================================
+# LOGIN
+# ============================================
+
+@app.route('/login', methods=['GET'])
+def login():
+    """Tela de login"""
+    if autenticado():
+        return redirect('/')
+    return send_from_directory(frontend_dir, 'login.html')
+
+
+@app.route('/login', methods=['POST'])
+def fazer_login():
+    """Confere a senha e abre a sessao"""
+    dados = request.get_json(silent=True) or request.form
+    senha = (dados.get('senha') or '').strip()
+
+    if not senha:
+        return jsonify({'sucesso': False, 'erro': 'Digite a senha'}), 400
+
+    if not _senha_configurada():
+        return jsonify({
+            'sucesso': False,
+            'erro': 'Login ainda não configurado no servidor (falta ADMIN_SENHA)'
+        }), 503
+
+    if not conferir_senha(senha):
+        return jsonify({'sucesso': False, 'erro': 'Senha incorreta'}), 401
+
+    session.clear()
+    session['logado'] = True
+    session.permanent = True
+    return jsonify({'sucesso': True})
+
+
+@app.route('/logout', methods=['POST', 'GET'])
+def logout():
+    """Encerra a sessao"""
+    session.clear()
+    return redirect('/login')
+
+
+@app.route('/api/sessao', methods=['GET'])
+def status_sessao():
+    """Diz ao frontend se ainda esta logado"""
+    return jsonify({
+        'autenticado': autenticado(),
+        'login_configurado': bool(_senha_configurada())
+    })
+
 
 # Inicializar banco no início
 init_db()
@@ -24,6 +83,7 @@ init_db()
 # ============================================
 
 @app.route('/api/estoque', methods=['GET'])
+@exigir_login
 def get_estoque():
     """Retorna todos os produtos com estoque atual"""
     try:
@@ -41,6 +101,7 @@ def get_estoque():
 # ============================================
 
 @app.route('/api/doacoes', methods=['GET'])
+@exigir_login
 def get_doacoes():
     """Retorna lista de doações recentes"""
     try:
@@ -51,6 +112,7 @@ def get_doacoes():
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/doacoes', methods=['POST'])
+@exigir_login
 def post_doacao():
     """Registra uma nova doação"""
     try:
@@ -83,6 +145,7 @@ def post_doacao():
 # ============================================
 
 @app.route('/api/distribuicoes', methods=['GET'])
+@exigir_login
 def get_distribuicoes():
     """Retorna lista de distribuições recentes"""
     try:
@@ -93,6 +156,7 @@ def get_distribuicoes():
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/distribuicoes', methods=['POST'])
+@exigir_login
 def post_distribuicao():
     """Registra uma nova distribuição"""
     try:
@@ -134,6 +198,7 @@ def post_distribuicao():
 # ============================================
 
 @app.route('/api/resumo', methods=['GET'])
+@exigir_login
 def get_resumo():
     """Retorna resumo do estoque"""
     try:
@@ -147,16 +212,19 @@ def get_resumo():
 # ============================================
 
 @app.route('/')
+@exigir_login
 def index():
     """Serve o frontend"""
     return send_from_directory('../frontend', 'index.html')
 
 @app.route('/stats')
+@exigir_login
 def stats():
     """Serve a página de estatísticas"""
     return send_from_directory(app.static_folder, 'stats.html')
 
 @app.route('/dados')
+@exigir_login
 def dados_endpoint():
     """Retorna dados para o dashboard"""
     try:
