@@ -54,6 +54,22 @@ railway up
 ## Variáveis de ambiente
 - `DATABASE_URL` — PostgreSQL connection string (Railway define automaticamente)
 - `PORT` — Porta do servidor (padrão: 5000)
+- `ADMIN_SENHA` — Senha para entrar no sistema (obrigatória; sem ela o login fica bloqueado)
+- `SESSION_SECRET` — Chave que assina o cookie de sessão
+
+## Autenticação
+
+O sistema tem **login com senha única**, compartilhada pela equipe.
+Sem `ADMIN_SENHA` configurada, ninguém consegue entrar — não existe
+senha padrão no código.
+
+```bash
+export ADMIN_SENHA="minha-senha"
+export SESSION_SECRET="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+python backend/app.py
+```
+
+Detalhes em [`backend/AUTH.md`](backend/AUTH.md).
 
 ## Produtos iniciais cadastrados
 Arroz, Feijão, Óleo de cozinha, Leite em pó, Açúcar, Farinha de trigo, Café em pó, Sal, Macarrão, Cuscuz, Gelatina, Chocolate em pó.
