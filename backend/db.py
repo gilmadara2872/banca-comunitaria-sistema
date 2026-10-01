@@ -61,8 +61,22 @@ def get_engine():
     """Create engine from DATABASE_URL or SQLite fallback"""
     db_url = os.environ.get('DATABASE_URL')
     if db_url:
+        # Railway e varios provedores ainda entregam o esquema antigo
+        # 'postgres://'. O SQLAlchemy 2.1 aceita, mas normalizamos aqui
+        # para nao depender do formato.
         if db_url.startswith('postgres://'):
             db_url = db_url.replace('postgres://', 'postgresql://', 1)
+
+        # O driver precisa ser explicito: o SQLAlchemy 2.1 padrao para
+        # 'postgresql://' e o psycopg (v3), enquanto o requirements.txt
+        # instala o psycopg2 (v2). Sem fixar o driver o create_engine
+        # quebra com ModuleNotFoundError: No module named 'psycopg'.
+        if db_url.startswith('postgresql://'):
+            db_url = db_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+        elif db_url.startswith('postgresql+psycopg2://'):
+            # O Railway pode devolver o driver v2 em algumas variacoes.
+            db_url = db_url.replace('postgresql+psycopg2://', 'postgresql+psycopg://', 1)
+
         return create_engine(db_url)
     else:
         # Use current working directory for SQLite fallback

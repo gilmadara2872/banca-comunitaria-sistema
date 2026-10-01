@@ -1,4 +1,6 @@
 Flask==2.3.3
 Flask-CORS==3.0.10
 sqlalchemy>=2.0.0
-psycopg2-binary>=2.9.0
+# Driver do PostgreSQL. O SQLAlchemy 2.x usa o psycopg v3 por padrao,
+# entao e este que precisa estar instalado (o psycopg2 e o v2 legado).
+psycopg[binary]>=3.1.0
