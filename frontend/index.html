@@ -64,6 +64,19 @@
         .item-historico .qtd { font-weight: 700; white-space: nowrap; margin-left: 10px; }
         .item-historico .qtd.entrada { color: #28a745; }
         .item-historico .qtd.saida   { color: #dc3545; }
+        .btn-excluir {
+            background: transparent; border: 1px solid #dc3545; color: #dc3545;
+            border-radius: 4px; font-size: 14px; cursor: pointer;
+            margin-left: 10px; padding: 3px 8px; line-height: 1;
+        }
+        .btn-excluir:active { background: #dc3545; color: white; }
+        .zona-perigo {
+            border: 1px solid #f0c0c0; background: #fff8f8;
+        }
+        .zona-perigo h2 { color: #dc3545; }
+        .btn-excluir-tudo { background: #dc3545; }
+        .btn-excluir-tudo:active { background: #c82333; }
+        .explicacao-perigo { font-size: 12px; color: #721c24; margin-bottom: 10px; line-height: 1.4; }
         .tag {
             display: inline-block; font-size: 10px; padding: 1px 6px;
             border-radius: 8px; margin-left: 6px; font-weight: 600;
@@ -128,6 +141,16 @@
         <input type="text" id="obs-dist" placeholder="Observação (opcional)">
         <button class="btn action-btn" onclick="registrarDistribuicao()">Registrar Distribuição</button>
     </div>
+
+    <div class="card zona-perigo">
+        <h2>🗑️ Limpar Registros</h2>
+        <p class="explicacao-perigo">
+            Apagar uma movimentação desfaz o efeito dela no estoque.
+            O botão abaixo apaga <strong>todas</strong> as doações e distribuições
+            e zera o estoque. Não dá para desfazer.
+        </p>
+        <button class="btn btn-excluir-tudo" onclick="limparTudo()">Apagar Todas as Movimentações</button>
+    </div>
 </div>
 
 <script>
@@ -168,6 +191,16 @@ function formatarData(iso) {
     return `${dia}/${mes}/${ano}`;
 }
 
+// Os campos vem do banco e vao para o HTML por innerHTML. Sem escapar,
+// um nome de doador com "<script>" ou um onclick vira codigo executado
+// no navegador de quem abre a tela.
+function escapar(texto) {
+    if (texto === null || texto === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(texto);
+    return div.innerHTML;
+}
+
 async function carregarHistorico() {
     const [resD, resDist] = await Promise.all([
         api('/api/doacoes?limit=5'),
@@ -180,6 +213,7 @@ async function carregarHistorico() {
 
     const itens = [
         ...doacoes.map(d => ({
+            id: d.id,
             data: d.data,
             produto: d.nome,
             pessoa: d.doador,
@@ -189,6 +223,7 @@ async function carregarHistorico() {
             tipo: 'entrada'
         })),
         ...distribuicoes.map(d => ({
+            id: d.id,
             data: d.data,
             produto: d.nome,
             pessoa: d.beneficiario,
@@ -210,18 +245,82 @@ async function carregarHistorico() {
         <div class="item-historico">
             <div class="info">
                 <div class="titulo">
-                    ${i.produto || 'Produto'}
+                    ${escapar(i.produto) || 'Produto'}
                     <span class="tag ${i.tipo}">${i.tipo === 'entrada' ? 'Doação' : 'Distribuição'}</span>
                 </div>
                 <div class="detalhe">
-                    ${i.pessoa ? i.pessoa + ' · ' : ''}${formatarData(i.data)}
+                    ${i.pessoa ? escapar(i.pessoa) + ' · ' : ''}${escapar(formatarData(i.data))}
                 </div>
             </div>
             <div class="qtd ${i.tipo}">
-                ${i.tipo === 'entrada' ? '+' : '−'}${i.qtd} ${noPlural(i.qtd, i.unidade)}
+                ${i.tipo === 'entrada' ? '+' : '−'}${escapar(i.qtd)} ${escapar(noPlural(i.qtd, i.unidade))}
             </div>
+            <button class="btn-excluir" title="Excluir registro"
+                    onclick="excluirRegistro('${i.tipo === 'entrada' ? 'entrada' : 'saida'}', ${Number(i.id) || 0})">✕</button>
         </div>
     `).join('');
+}
+
+// ---------- excluir ----------
+// Cada exclusao desfaz o efeito no estoque: o backend desconta a
+// doacao ou devolve a distribuicao antes de apagar o registro.
+async function excluirRegistro(tipo, id) {
+    const caminho = tipo === 'entrada'
+        ? `/api/doacoes/${id}`
+        : `/api/distribuicoes/${id}`;
+
+    const resposta = confirm(
+        'Excluir este registro?\n\n' +
+        'O estoque será ajustado para refletir a exclusão.'
+    );
+    if (!resposta) return;
+
+    const res = await api(caminho, {method: 'DELETE'});
+    if (!res) return;
+
+    const dados = await res.json();
+
+    if (!res.ok || dados.erro) {
+        mostrarAviso(dados.erro || 'Não foi possível excluir', 'erro');
+        return;
+    }
+
+    mostrarAviso(`✓ ${dados.mensagem} — estoque ajustado`);
+    await atualizar();
+}
+
+async function limparTudo() {
+    const primeira = confirm(
+        'Apagar TODAS as doações e distribuições?\n\n' +
+        'O estoque será zerado. Não dá para desfazer.'
+    );
+    if (!primeira) return;
+
+    // Segunda confirmacao: apagar tudo e irreversivel demais para
+    // depender de um unico confirm.
+    const segunda = confirm(
+        'Tem certeza? Todos os registros serão perdidos.'
+    );
+    if (!segunda) return;
+
+    const res = await api('/api/limpar', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({confirmar: 'APAGAR TUDO'})
+    });
+    if (!res) return;
+
+    const dados = await res.json();
+
+    if (!res.ok || dados.erro) {
+        mostrarAviso(dados.erro || 'Não foi possível limpar', 'erro');
+        return;
+    }
+
+    const a = dados.apagadas.doacoes || 0;
+    const d = dados.apagadas.distribuicoes || 0;
+    mostrarAviso(`✓ ${a} doações e ${d} distribuições apagadas — estoque zerado`);
+    await atualizar();
 }
 
 async function atualizar() {

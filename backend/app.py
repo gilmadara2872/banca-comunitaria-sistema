@@ -9,7 +9,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from db import (
     init_db, listar_produtos, adicionar_doacao, adicionar_distribuicao,
-    listar_doacoes, listar_distribuicoes, resumo_estoque, atualizar_estoque
+    listar_doacoes, listar_distribuicoes, resumo_estoque, atualizar_estoque,
+    excluir_doacao, excluir_distribuicao, limpar_movimentacoes
 )
 from auth import conferir_senha, autenticado, exigir_login, _senha_configurada
 
@@ -192,6 +193,61 @@ def post_distribuicao():
             }), 400
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
+
+# ============================================
+# EXCLUSÃO DE REGISTROS
+# Cada exclusão desfaz o efeito no estoque: apagar uma doação
+# desconta o que ela somou, apagar uma distribuição devolve.
+# Sem isso os números do estoque ficam mentindo.
+# ============================================
+
+@app.route('/api/doacoes/<int:doacao_id>', methods=['DELETE'])
+@exigir_login
+def delete_doacao(doacao_id):
+    """Apaga uma doação e desfaz o efeito no estoque"""
+    try:
+        if not excluir_doacao(doacao_id):
+            return jsonify({'sucesso': False, 'erro': 'Doação não encontrada'}), 404
+        return jsonify({'sucesso': True, 'mensagem': 'Doação excluída'})
+    except Exception as e:
+        return jsonify({'sucesso': False, 'erro': str(e)}), 500
+
+
+@app.route('/api/distribuicoes/<int:distribuicao_id>', methods=['DELETE'])
+@exigir_login
+def delete_distribuicao(distribuicao_id):
+    """Apaga uma distribuição e desfaz o efeito no estoque"""
+    try:
+        if not excluir_distribuicao(distribuicao_id):
+            return jsonify({'sucesso': False, 'erro': 'Distribuição não encontrada'}), 404
+        return jsonify({'sucesso': True, 'mensagem': 'Distribuição excluída'})
+    except Exception as e:
+        return jsonify({'sucesso': False, 'erro': str(e)}), 500
+
+
+@app.route('/api/limpar', methods=['POST'])
+@exigir_login
+def limpar():
+    """Apaga todas as movimentações e zera o estoque"""
+    try:
+        dados = request.get_json(silent=True) or {}
+
+        # Apagar tudo e irreversivel: exige confirmacao explicita.
+        if dados.get('confirmar') != 'APAGAR TUDO':
+            return jsonify({
+                'sucesso': False,
+                'erro': 'É preciso confirmar o apagamento'
+            }), 400
+
+        apagadas = limpar_movimentacoes()
+        return jsonify({
+            'sucesso': True,
+            'mensagem': 'Movimentações apagadas e estoque zerado',
+            'apagadas': apagadas
+        })
+    except Exception as e:
+        return jsonify({'sucesso': False, 'erro': str(e)}), 500
+
 
 # ============================================
 # ROTA DE RESUMO

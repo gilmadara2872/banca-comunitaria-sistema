@@ -230,6 +230,63 @@ def listar_distribuicoes(limit=50):
     return resultados
 
 
+def excluir_doacao(doacao_id):
+    """Apaga uma doacao e devolve a quantidade ao estoque que ela somou"""
+    session, _ = get_session()
+    doacao = session.query(Doacao).filter_by(id=int(doacao_id)).first()
+    if not doacao:
+        session.close()
+        return False
+
+    produto = session.query(Produto).filter_by(id=doacao.produto_id).first()
+    if produto:
+        produto.estoque_atual -= doacao.quantidade
+        # Evita estoque negativo quando o registro e apagado fora de ordem.
+        if produto.estoque_atual < 0:
+            produto.estoque_atual = 0
+
+    session.delete(doacao)
+    session.commit()
+    session.close()
+    return True
+
+
+def excluir_distribuicao(distribuicao_id):
+    """Apaga uma distribuicao e devolve ao estoque o que ela tirou"""
+    session, _ = get_session()
+    dist = session.query(Distribuicao).filter_by(id=int(distribuicao_id)).first()
+    if not dist:
+        session.close()
+        return False
+
+    produto = session.query(Produto).filter_by(id=dist.produto_id).first()
+    if produto:
+        produto.estoque_atual += dist.quantidade
+
+    session.delete(dist)
+    session.commit()
+    session.close()
+    return True
+
+
+def limpar_movimentacoes(apagar_produtos=False):
+    """Apaga todas as doacoes e distribuicoes. Usado pela rota de limpeza."""
+    session, _ = get_session()
+
+    doacoes = session.query(func.count(Doacao.id)).scalar() or 0
+    distribuicoes = session.query(func.count(Distribuicao.id)).scalar() or 0
+
+    session.query(Doacao).delete()
+    session.query(Distribuicao).delete()
+
+    # Sem isso o estoque ficaria com os numeros das doacoes que sumiram.
+    session.query(Produto).update({Produto.estoque_atual: 0})
+
+    session.commit()
+    session.close()
+    return {'doacoes': doacoes, 'distribuicoes': distribuicoes}
+
+
 def resumo_estoque():
     """Retorna resumo do estoque"""
     session, _ = get_session()

@@ -189,6 +189,13 @@ async function carregarTudo() {
     }
 }
 
+function escapar(texto) {
+    if (texto === null || texto === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(texto);
+    return div.innerHTML;
+}
+
 function filtrar() {
     const de = document.getElementById('filtro-de').value;
     const ate = document.getElementById('filtro-ate').value;
@@ -221,11 +228,11 @@ function filtrar() {
     
     tbody.innerHTML = itens.map(i => `
         <tr>
-            <td>${i.data}</td>
+            <td>${escapar(i.data)}</td>
             <td><span class="badge ${i.tipo==='doacao'?'badge-in':'badge-out'}">${i.tipo==='doacao'?'Entrada':'Saída'}</span></td>
-            <td>${i.nome}</td>
-            <td>${i.quantidade} ${i.unidade||''}</td>
-            <td>${i.pessoa}</td>
+            <td>${escapar(i.nome)}</td>
+            <td>${escapar(i.quantidade)} ${escapar(i.unidade||'')}</td>
+            <td>${escapar(i.pessoa)}</td>
         </tr>
     `).join('');
     
