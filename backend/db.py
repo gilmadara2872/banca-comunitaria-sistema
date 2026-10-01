@@ -139,7 +139,13 @@ def atualizar_estoque(produto_id, quantidade):
 def adicionar_doacao(produto_id, quantidade, doador, data, observacao=''):
     """Registra uma doação e atualiza estoque"""
     session, _ = get_session()
-    
+
+    # O produto_id chega do frontend como texto (o <select> devolve string).
+    # O SQLite aceita comparar inteiro com texto, mas o Postgres lanca
+    # 'operator does not exist: integer = character varying'. Convertemos
+    # para int aqui, na raiz, para proteger todas as rotas que gravam.
+    produto_id = int(produto_id)
+
     doacao = Doacao(
         produto_id=produto_id,
         quantidade=quantidade,
@@ -162,7 +168,11 @@ def adicionar_doacao(produto_id, quantidade, doador, data, observacao=''):
 def adicionar_distribuicao(produto_id, quantidade, beneficiario, data, observacao=''):
     """Registra uma distribuição e reduz estoque"""
     session, _ = get_session()
-    
+
+    # Mesma conversao do adicionar_doacao: o frontend manda texto e o
+    # Postgres exige inteiro na comparacao.
+    produto_id = int(produto_id)
+
     produto = session.query(Produto).filter_by(id=produto_id).first()
     
     if produto and produto.estoque_atual >= quantidade:
