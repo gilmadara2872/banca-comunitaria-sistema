@@ -64,3 +64,5 @@ tests/
 *.p12
 *.pfx
 secrets/
+.vercel
+.env*

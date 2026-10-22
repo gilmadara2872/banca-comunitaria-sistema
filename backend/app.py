@@ -271,7 +271,7 @@ def get_resumo():
 @exigir_login
 def index():
     """Serve o frontend"""
-    return send_from_directory('../frontend', 'index.html')
+    return send_from_directory(frontend_dir, 'index.html')
 
 @app.route('/stats')
 @exigir_login
