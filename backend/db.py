@@ -81,20 +81,13 @@ def get_engine():
         elif db_url.startswith('postgresql+psycopg2://'):
             db_url = db_url.replace('postgresql+psycopg2://', 'postgresql+psycopg://', 1)
 
-        # Transaction pooler (pgbouncer) nao suporta prepared statements:
-        # desabilita o cache de prepared statements do psycopg (prepare_threshold=0).
-        # pool_pre_ping evita conexoes mortas; pool_size limitado evita EMAXCONN.
-        is_pooler = 'pooler.supabase.com' in db_url or ':6543' in db_url
-        connect_args = {}
-        if is_pooler:
-            connect_args['prepare_threshold'] = 0
+        # Session pooler (porta 5432) suporta prepared statements; nao desabilitar.
         engine = create_engine(
             db_url,
             pool_pre_ping=True,
             pool_size=5,
             max_overflow=5,
             pool_recycle=300,
-            connect_args=connect_args,
         )
     else:
         db_path = os.path.join(os.getcwd(), 'banca.db')
