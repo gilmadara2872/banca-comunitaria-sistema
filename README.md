@@ -3,7 +3,7 @@
 Sistema de registro de doações e distribuições para a banca alimentícia comunitária
 do Parque Araruna, Teresina-PI. Projeto de extensão da UNINASSAU.
 
-**Sistema no ar:** https://banca-comunitaria-sistema-production-1e32.up.railway.app
+**Sistema no ar:** https://banca-comunitaria-sistema.vercel.app
 
 ---
 
@@ -27,11 +27,11 @@ digita o número do estoque à mão.
 
 | Camada | Tecnologia |
 |---|---|
-| Backend | Flask 2.3 (Python 3.11) |
-| Banco | PostgreSQL 16 (Railway) via SQLAlchemy 2.x |
+| Backend | Flask 2.x (Python 3.11) |
+| Banco | PostgreSQL (Supabase) via SQLAlchemy 2.x |
 | Frontend | HTML, CSS e JavaScript puro — sem framework |
 | Gráficos | Chart.js 4 (carregado por CDN) |
-| Deploy | Railway (Docker) |
+| Deploy | Vercel (serverless, preset Python) |
 
 O sistema é responsivo e roda em qualquer navegador moderno: Chrome, Firefox,
 Edge, Safari, Android e iPhone.
@@ -43,27 +43,31 @@ Edge, Safari, Android e iPhone.
 ```
 banca-comunitaria-sistema/
 ├── backend/
+│   ├── __init__.py         # torna backend importável (Vercel)
 │   ├── app.py              # Flask: rotas da API e páginas
 │   ├── auth.py             # Sessão e verificação de senha
 │   ├── db.py               # Modelos SQLAlchemy e as consultas
 │   ├── AUTH.md             # Detalhes do login
-│   └── requirements.txt    # Dependências
+│   └── requirements.txt    # Dependências (fallback)
 ├── frontend/
 │   ├── login.html          # Tela de login
 │   ├── index.html          # App: estoque, histórico e formulários
 │   ├── stats.html          # Dashboard com gráficos
 │   ├── manifest.json       # Ícone para instalação na tela inicial
 │   └── sw.js               # Service worker
-├── Dockerfile
-├── docker-compose.yml
-└── setup.py
+├── pyproject.toml          # Entrypoint + dependências (Vercel instala daqui)
+├── vercel.json             # Configuração Vercel (cron de keep-alive)
+├── requirements.txt        # Fallback/compatibilidade
+├── Dockerfile              # Deploy alternativo (Docker)
+└── docker-compose.yml
 ```
 
 ---
 
 ## Rotas da API
 
-Todas as rotas de dados exigem sessão iniciada (retornam `401` sem login).
+Todas as rotas de dados exigem sessão iniciada (retornam `401` sem login),
+exceto `/login` e `/api/health`.
 
 | Rota | Método | Descrição |
 |---|---|---|
@@ -78,6 +82,7 @@ Todas as rotas de dados exigem sessão iniciada (retornam `401` sem login).
 | `/api/distribuicoes/<id>` | DELETE | Apaga uma distribuição e devolve ao estoque |
 | `/api/limpar` | POST | Apaga todas as movimentações e zera o estoque |
 | `/dados` | GET | Tudo junto, para relatórios e scripts |
+| `/api/health` | GET | Health check público (usado pelo cron de keep-alive) |
 
 ### Sobre o DELETE
 
@@ -104,14 +109,10 @@ linha de comando não apaga nada sem ela.
 git clone https://github.com/gilmadara2872/banca-comunitaria-sistema.git
 cd banca-comunitaria-sistema
 
-python3 -m venv venv
-source venv/bin/activate
-pip install -r backend/requirements.txt
-
-export ADMIN_SENHA="sua-senha"
-export SESSION_SECRET="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
-
-python backend/app.py
+# python3-venv pode faltar no sistema; use uv
+uv venv venv
+VIRTUAL_ENV=$PWD/venv uv pip install -r backend/requirements.txt
+./venv/bin/python backend/app.py
 ```
 
 Abre em http://localhost:5000
@@ -125,45 +126,74 @@ Sem `DATABASE_URL`, o sistema cai para um arquivo SQLite local (`banca.db`) —
 
 | Variável | Obrigatória | Para que serve |
 |---|---|---|
-| `DATABASE_URL` | em produção | Conexão com o PostgreSQL |
+| `DATABASE_URL` | em produção | Conexão com o PostgreSQL (pooler do Supabase) |
 | `ADMIN_SENHA` | **sim** | Senha que a equipe usa para entrar |
 | `SESSION_SECRET` | recomendada | Chave que assina o cookie de sessão |
-| `PORT` | Railway define | Porta do servidor (padrão 5000) |
+| `POSTGRES_URL` / `POSTGRES_PRISMA_URL` | não | Fallbacks aceitos para a conexão do banco |
 
 **Sem `ADMIN_SENHA` o sistema não deixa ninguém entrar.** Não existe senha
 padrão no código. Detalhes em [`backend/AUTH.md`](backend/AUTH.md).
 
 ---
 
-## Deploy no Railway
+## Deploy no Vercel + Supabase
 
-O deploy é automático: cada `git push` na branch `main` reconstrói e publica.
+O app é um Flask servido pelo preset Python do Vercel. A nuvem é atualizada
+pelo GitHub: editar local → testar local → commit → push na `main`. O Vercel
+redeploya sozinho ao ver o push. Fallback: `vercel deploy --prod --yes` dentro
+do clone (CLI autenticado).
 
-```bash
-git push origin main
-```
+Configuração necessária no repo (já aplicada):
 
-Para criar o serviço do zero:
+- `pyproject.toml` com `entrypoint = "backend.app:app"` e `dependencies`
+  (Flask, Flask-CORS, SQLAlchemy, psycopg[binary]). O Vercel instala a partir
+  do `pyproject.toml` (ignora `requirements.txt` quando ele existe).
+- `backend/__init__.py` vazio, para `backend.app` ser importável.
+- Rota `/` usa `send_from_directory(frontend_dir, 'index.html')` com caminho
+  absoluto (`frontend_dir`), não relativo — no serverless o cwd não é o do app.
+- `.gitignore` ignora `.vercel` e `.env*`.
 
-```bash
-railway login
-railway init
-railway add --database postgres
-railway link
-railway up
-```
+Env vars no Vercel (Project → Settings → Environment Variables):
 
-Depois, no painel:
+- `DATABASE_URL` = connection string do **pooler** do Supabase (porta 6543 ou
+  5432, host `*.pooler.supabase.com`). **Nunca use a URL direta**
+  (`db.<ref>.supabase.co:5432`): ela resolve só para IPv6 e o Vercel (IPv4)
+  falha com "Cannot assign requested address". O pooler é IPv4. Username do
+  pooler: `postgres.<project_ref>`.
+- `ADMIN_SENHA` e `SESSION_SECRET`.
 
-1. **Settings → Source** — confirmar repositório `gilmadara2872/banca-comunitaria-sistema`, branch `main`, trigger *On push*
-2. **Settings → Networking → Generate Domain** — sem domínio o serviço não responde em nenhum endereço
-3. **Variables** — `ADMIN_SENHA`, `SESSION_SECRET` e `DATABASE_URL` (copiada do serviço Postgres)
+Verificação: abrir https://banca-comunitaria-sistema.vercel.app/login e conferir
+que o login funciona (não só status HTTP).
 
-### Um repositório pode estar ligado a vários projetos do Railway
+### Keep-alive (evitar pausa do Supabase free tier)
 
-Cada projeto constrói separado e tem seu próprio endereço. Se o deploy passar e o
-site continuar servindo a versão antiga, provavelmente você está abrindo o
-domínio de outro projeto. Verifique em **Deployments** qual commit foi publicado.
+O Supabase free tier pausa o projeto após 7 dias de inatividade. Para evitar,
+existe um cron diário (`0 6 * * *`) configurado em `vercel.json` que chama
+`/api/health` (público, sem login). O endpoint executa `SELECT 1` no banco.
+
+### Pitfalls do Vercel + Supabase
+
+- **Supabase direct connection é IPv6-only** → Vercel não alcança. Usar sempre
+  o pooler.
+- **Pooler com muitas tentativas de senha errada** ativa circuit breaker
+  (ECIRCUITBREAKER "too many authent"). Aguardar cooldown antes de tentar de
+  novo.
+- **Senha do banco não pode ser resetada via Management API/SQL**: o role
+  `postgres` não é superuser no Supabase (`rolsuper=false`), então
+  `ALTER ROLE postgres PASSWORD` falha. Resetar só pelo painel (Project
+  Settings → Database → Reset database password).
+- **Supavisor cacheia senha após rotação**: após resetar a senha no painel do
+  Supabase, o pooler pode continuar rejeitando a senha nova por alguns minutos.
+  Tentar de novo após 1-2 min; se persistir, resetar a senha mais uma vez
+  (valor diferente) para forçar limpeza do cache.
+- **Vercel redige valores secretos nos logs**: ao imprimir `DATABASE_URL` em
+  stderr para debug, o Vercel mostra `***` no lugar da senha. Para confirmar que
+  o valor está sendo lido, verifique o comprimento ou a estrutura (host, porta),
+  nunca o conteúdo.
+- **Vercel Deployment Protection (SSO)**: com ssoProtection
+  `all_except_custom_domains`, deploys de preview retornam 401 "Protected
+  deployment", mas aliases de domínio customizado não são protegidos. Para
+  testar o deploy mais recente, use o alias ou desabilite a proteção no painel.
 
 ---
 
@@ -177,9 +207,6 @@ Instalar apenas `psycopg2-binary` faz o processo morrer no boot com
 
 Por isso o `requirements.txt` instala `psycopg[binary]` **e** o `db.py` fixa o
 driver na URL (`postgresql+psycopg://`). Os dois juntos são necessários.
-
-Esse erro acontece no boot, e o Railway continua marcando o build como
-`Success` — a imagem foi construída, o problema é no start.
 
 ### Tipos vindos do formulário
 
@@ -198,6 +225,12 @@ completamente quebrado.
 Nome de doador e de beneficiário vêm do banco e entram no HTML. Todo campo
 passa por `escapar()` antes de ir para o `innerHTML` — sem isso, um nome com
 `<img src=x onerror=...>` executa código no navegador de quem abre a tela.
+
+### Cache de engine (Vercel warm)
+
+O `db.py` mantém um cache em nível de módulo do engine do SQLAlchemy para
+reutilizar o pool de conexões entre chamadas no mesmo processo (Vercel warm),
+evitando estourar o limite de clientes do pooler (session mode = 15).
 
 ### Tabelas do banco
 
