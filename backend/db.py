@@ -59,7 +59,14 @@ class Distribuicao(Base):
 
 def get_engine():
     """Create engine from DATABASE_URL or SQLite fallback"""
-    db_url = os.environ.get('DATABASE_URL')
+    # Ordem de preferencia: DATABASE_URL (definido manualmente) e, em seguida,
+    # as variaveis que o marketplace do Vercel (Supabase) injeta automaticamente.
+    # Assim o app funciona mesmo se alguem esquecer de criar DATABASE_URL.
+    db_url = (
+        os.environ.get('DATABASE_URL')
+        or os.environ.get('POSTGRES_URL')
+        or os.environ.get('POSTGRES_PRISMA_URL')
+    )
     if db_url:
         # Railway e varios provedores ainda entregam o esquema antigo
         # 'postgres://'. O SQLAlchemy 2.1 aceita, mas normalizamos aqui

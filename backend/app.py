@@ -76,6 +76,23 @@ def status_sessao():
     })
 
 
+# Rota de health check (publica) para manter o Supabase ativo via cron.
+# O Supabase free tier pausa o projeto apos 7 dias de inatividade; uma
+# requisicao diaria a este endpoint evita a pausa.
+@app.route('/api/health', methods=['GET'])
+def health():
+    """Health check publico (sem login) para cron/keep-alive."""
+    try:
+        from db import get_session
+        from sqlalchemy import text
+        session, _ = get_session()
+        session.execute(text('SELECT 1'))
+        session.close()
+        return jsonify({'status': 'ok'}), 200
+    except Exception as e:
+        return jsonify({'status': 'erro', 'erro': str(e)}), 500
+
+
 # Inicializar banco no início
 init_db()
 
