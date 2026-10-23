@@ -57,38 +57,51 @@ class Distribuicao(Base):
     produto = relationship("Produto", back_populates="distribuicoes")
 
 
+# Cache de engine em nivel de modulo: reutiliza o pool de conexoes entre
+# chamadas no mesmo processo (Vercel warm). Evita estourar o limite de
+# clientes do pooler (session mode = 15).
+_engine_cache = {'engine': None}
+
+
 def get_engine():
-    """Create engine from DATABASE_URL or SQLite fallback"""
-    # Ordem de preferencia: DATABASE_URL (definido manualmente) e, em seguida,
-    # as variaveis que o marketplace do Vercel (Supabase) injeta automaticamente.
-    # Assim o app funciona mesmo se alguem esquecer de criar DATABASE_URL.
+    """Create (or reuse) engine from DATABASE_URL or SQLite fallback"""
+    if _engine_cache['engine'] is not None:
+        return _engine_cache['engine']
+
     db_url = (
         os.environ.get('DATABASE_URL')
         or os.environ.get('POSTGRES_URL')
         or os.environ.get('POSTGRES_PRISMA_URL')
     )
     if db_url:
-        # Railway e varios provedores ainda entregam o esquema antigo
-        # 'postgres://'. O SQLAlchemy 2.1 aceita, mas normalizamos aqui
-        # para nao depender do formato.
         if db_url.startswith('postgres://'):
             db_url = db_url.replace('postgres://', 'postgresql://', 1)
-
-        # O driver precisa ser explicito: o SQLAlchemy 2.1 padrao para
-        # 'postgresql://' e o psycopg (v3), enquanto o requirements.txt
-        # instala o psycopg2 (v2). Sem fixar o driver o create_engine
-        # quebra com ModuleNotFoundError: No module named 'psycopg'.
         if db_url.startswith('postgresql://'):
             db_url = db_url.replace('postgresql://', 'postgresql+psycopg://', 1)
         elif db_url.startswith('postgresql+psycopg2://'):
-            # O Railway pode devolver o driver v2 em algumas variacoes.
             db_url = db_url.replace('postgresql+psycopg2://', 'postgresql+psycopg://', 1)
 
-        return create_engine(db_url)
+        # Transaction pooler (pgbouncer) nao suporta prepared statements:
+        # desabilita o cache de prepared statements do psycopg (prepare_threshold=0).
+        # pool_pre_ping evita conexoes mortas; pool_size limitado evita EMAXCONN.
+        is_pooler = 'pooler.supabase.com' in db_url or ':6543' in db_url
+        connect_args = {}
+        if is_pooler:
+            connect_args['prepare_threshold'] = 0
+        engine = create_engine(
+            db_url,
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=5,
+            pool_recycle=300,
+            connect_args=connect_args,
+        )
     else:
-        # Use current working directory for SQLite fallback
         db_path = os.path.join(os.getcwd(), 'banca.db')
-        return create_engine(f'sqlite:///{db_path}')
+        engine = create_engine(f'sqlite:///{db_path}')
+
+    _engine_cache['engine'] = engine
+    return engine
 
 
 def get_session():
